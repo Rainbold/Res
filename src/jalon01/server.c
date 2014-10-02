@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define SIZE_BUFFER 1000
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
 	int sock;
 	int client;
 	struct sockaddr_in server_info;
-	struct sockaddr client_info;
+	struct sockaddr_in client_info;
 	socklen_t client_info_len;
 	char buf[SIZE_BUFFER];
 	int len;
@@ -58,14 +59,14 @@ int main(int argc, char** argv)
     for (;;)
     {
         //accept connection from client
-        client = do_accept(sock, &client_info, &client_info_len);
-        printf("New client\n");
+        client = do_accept(sock, (struct sockaddr*) &client_info, &client_info_len);
+
+        printf("New client : %s\n", inet_ntoa(client_info.sin_addr));
 
         while(1) {
         	//read what the client has to say
         	len = do_read(client, buf);
         	printf("%s\n", buf);
-        	printf("len: %d\n", len);
 
         	if(len == 0)
         		break;
@@ -81,6 +82,8 @@ int main(int argc, char** argv)
 
         //clean up client socket
         close(client);
+
+        printf("Connection closed.\n");
     }
 
     //clean up server socket
@@ -90,11 +93,13 @@ int main(int argc, char** argv)
 }
 
 int do_socket() {
-
+	int yes = 1;
 	int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(fd == -1) {
 		error("Error with socket() in do_socket()");
 	}
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+		error("ERROR setting socket options");
 	return fd;
 }
 
