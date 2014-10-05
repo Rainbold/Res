@@ -2,12 +2,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+
 #define SIZE_BUFFER 1000
+#define MAX_CLIENT_NB 20
+#define CLIENTS_NB 4
+
+
+struct client_info
+{
+    int id;
+    uint32_t *remoteIP;
+};
+
+struct server_info
+{
+    int sock;
+    int clients_nb;
+    int clients_sock[MAX_CLIENT_NB];
+    pthread_t clients_thread[MAX_CLIENT_NB];
+    struct sockaddr_in clients_info[MAX_CLIENT_NB];
+    socklen_t client_info_len[MAX_CLIENT_NB];  
+};
+
 
 void error(const char *msg)
 {
@@ -18,22 +40,26 @@ void error(const char *msg)
 int do_socket();
 void init_serv_addr(struct sockaddr_in* pt_server_info, int port);
 void do_bind(int sock, struct sockaddr_in* adr);
-int do_accept(int sock, struct sockaddr* pt_client_info, socklen_t* pt_client_info_size);
+int do_accept(int sock, struct sockaddr_in* pt_client_info, socklen_t* pt_client_info_size);
 ssize_t do_read(int client, char* buf);
 void do_write(int client, char* buf);
 ssize_t readline (int fd, void *str, size_t maxlen);
 ssize_t sendline (int fd, const void *str, size_t maxlen);
 
+struct server_info* server_init(int clients_nb, int fd);
+static void* server_listening(void* p_data);
+
 int main(int argc, char** argv)
 {
 	int sock;
-	int client;
 	struct sockaddr_in server_info;
-	struct sockaddr_in client_info;
-	socklen_t client_info_len;
 	char buf[SIZE_BUFFER];
 	int len;
 	int i;
+
+    pthread_t thread_server;
+    int ret = 0;
+
 
     if (argc != 2)
     {
@@ -43,6 +69,8 @@ int main(int argc, char** argv)
 
     //create the socket with check for validity
     sock = do_socket();
+
+    struct server_info* serv = server_init(CLIENTS_NB, sock);
 
     //init the serv_add structure
     init_serv_addr(&server_info, atoi(argv[1]));
@@ -56,35 +84,38 @@ int main(int argc, char** argv)
 
     printf("Server running and listening on port %s\n", argv[1]);
 
-    for (;;)
-    {
-        //accept connection from client
-        client = do_accept(sock, (struct sockaddr*) &client_info, &client_info_len);
+    ret = pthread_create(&thread_server, NULL, server_listening, serv);
 
-        printf("New client : %s\n", inet_ntoa(client_info.sin_addr));
+    while(1);
+    // for (;;)
+    // {
+    //     //accept connection from client
+    //     client = do_accept(sock, (struct sockaddr*) &client_info, &client_info_len);
 
-        while(1) {
-        	//read what the client has to say
-        	len = do_read(client, buf);
-        	printf("%s\n", buf);
+    //     printf("New client : %s\n", inet_ntoa(client_info.sin_addr));
 
-        	if(len == 0)
-        		break;
+    //     while(1) {
+    //     	//read what the client has to say
+    //     	len = do_read(client, buf);
+    //     	printf("%s\n", buf);
 
-      		//we write back to the client
-      		do_write(client, buf);
+    //     	if(len == 0)
+    //     		break;
 
-      		if(!strncmp("/quit", buf, 5))
-      			break;
+    //   		//we write back to the client
+    //   		do_write(client, buf);
 
-      		memset(buf, 0, len);
-        }
+    //   		if(!strncmp("/quit", buf, 5))
+    //   			break;
 
-        //clean up client socket
-        close(client);
+    //   		memset(buf, 0, len);
+    //     }
 
-        printf("Connection closed.\n");
-    }
+    //     //clean up client socket
+    //     close(client);
+
+    //     printf("Connection closed.\n");
+    // }
 
     //clean up server socket
     close(sock);
@@ -115,8 +146,8 @@ void do_bind(int sock, struct sockaddr_in* adr) {
 		error("Error with bind() in do_bind()");
 }
 
-int do_accept(int sock, struct sockaddr* pt_client_info, socklen_t* pt_client_info_size) {
-	int fd = accept(sock, pt_client_info, pt_client_info_size);
+int do_accept(int sock, struct sockaddr_in* pt_client_info, socklen_t* pt_client_info_size) {
+	int fd = accept(sock, (struct sockaddr*)pt_client_info, pt_client_info_size);
 	if(fd == -1)
 		error("Error with accept in do_accept()");
 	return fd;
@@ -137,4 +168,56 @@ ssize_t readline (int fd, void *str, size_t maxlen) {
 }
 ssize_t sendline (int fd, const void *str, size_t maxlen) {
 	return write(fd, str, maxlen);
+}
+
+struct server_info* server_init(int clients_nb, int sock)
+{
+    struct server_info* s = malloc(sizeof(*s));
+        s->clients_nb = clients_nb;
+        s->sock = sock;
+
+    return s;
+}
+
+static void* server_listening(void* p_data)
+{
+    struct server_info* serv = p_data;
+    int client_latest_id = 0;
+
+    for (;;)
+    {
+        //accept connection from client
+
+        if(client_latest_id < CLIENTS_NB)
+        {
+            serv->clients_sock[client_latest_id] = do_accept(serv->sock, &(serv->clients_info[client_latest_id]), &(serv->client_info_len[client_latest_id]) );
+            client_latest_id++;
+            printf("New client : %d\n", client_latest_id);
+        }
+
+
+        // while(1) {
+        //     //read what the client has to say
+        //     len = do_read(client, buf);
+        //     printf("%s\n", buf);
+
+        //     if(len == 0)
+        //         break;
+
+        //     //we write back to the client
+        //     do_write(client, buf);
+
+        //     if(!strncmp("/quit", buf, 5))
+        //         break;
+
+        //     memset(buf, 0, len);
+        // }
+
+        // //clean up client socket
+        // close(client);
+
+        // printf("Connection closed.\n");
+    }
+
+    return NULL;
 }
