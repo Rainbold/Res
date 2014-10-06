@@ -68,6 +68,10 @@ int main(int argc, char** argv)
         	len = do_read(client, buf);
         	printf("%s\n", buf);
 
+        	if(len == -1)
+        		error("Error: len == -1");
+
+        	// if len == 0, it means that the connection has been closed
         	if(len == 0)
         		break;
 
@@ -77,6 +81,7 @@ int main(int argc, char** argv)
       		if(!strncmp("/quit", buf, 5))
       			break;
 
+      		// buffer reset
       		memset(buf, 0, len);
         }
 
@@ -124,6 +129,7 @@ int do_accept(int sock, struct sockaddr* pt_client_info, socklen_t* pt_client_in
 
 ssize_t do_read(int client, char* buf) {
 	ssize_t size = readline(client, buf, SIZE_BUFFER);
+	// makes sure that the last char is \0
 	buf[size] = '\0';
 	return size;
 }
