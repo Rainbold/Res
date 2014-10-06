@@ -50,14 +50,15 @@ void do_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 }
 
 void init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
-	memset(pt_server_info, 0, sizeof(*pt_server_info));
-	pt_server_info->sin_family = AF_INET;
-	pt_server_info->sin_port = htons(atoi(port));
-	pt_server_info->sin_addr.s_addr = INADDR_ANY;
+	memset(serv_addr, 0, sizeof(*serv_addr));
+	serv_addr->sin_family = AF_INET;
+	serv_addr->sin_port = htons(atoi(port));
+	serv_addr->sin_addr.s_addr = INADDR_ANY;
 }
 
 void do_bind(const int fd, struct sockaddr_in *serv_addr) {
-
+	if( bind(fd, (struct sockaddr*) serv_addr, sizeof(*serv_addr)) == -1 )
+		error("Error with bind() in do_bind()");
 }
 
 void do_accept(const int server_fd, int *client_fd,

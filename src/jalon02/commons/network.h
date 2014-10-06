@@ -24,7 +24,7 @@ void error(const char* );
  * initialize a new ipv6 socket, controlling for error
  * @returns: the file descriptor corresponding to the new server socket
  */
-int do_socket(int family, int type, int protocol);
+int do_socket(int domain, int type, int protocol);
 
 /**
  * initialize the server address

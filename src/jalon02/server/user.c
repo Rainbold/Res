@@ -10,7 +10,7 @@
 puser get_user_by_fd(const int fd) {
 
 }
-puser get_user_by_uname(const char name[32]) {
+puser get_user_by_uname(const char name[USERNAME_LEN]) {
 
 }
 void add_user(const struct user aclient) {
@@ -20,6 +20,6 @@ void add_user(const struct user aclient) {
 void remove_user_by_fd(const int fd) {
 
 }
-void remove_user_by_uname(const char name[32]) {
+void remove_user_by_uname(const char name[USERNAME_LEN]) {
 
 }
