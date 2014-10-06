@@ -14,10 +14,9 @@
 int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port);
 int do_socket();
 void do_connect(int sock, struct sockaddr_in *serv_info);
-void readline(char* buf);
 void handle_client_message(int sock, char* buffer);
-ssize_t readline(int fd, void *str, size_t maxlen);
-ssize_t sendline(int fd, const void *str, size_t maxlen);
+ssize_t readline(int sock, void *buffer, size_t maxlen);
+ssize_t sendline(int sock, const void *buffer, size_t maxlen);
 
 int main(int argc,char** argv)
 {
@@ -38,7 +37,6 @@ int main(int argc,char** argv)
 
 	while( strncmp("/quit", buf, 5) != 0 )
 	{
-		readline(buf);
 		handle_client_message(sock, buf);
 	}
 
@@ -133,7 +131,7 @@ ssize_t readline(int sock, void *buffer, size_t maxlen)
 	return n;
 }
 
-ssize_t sendline(int fd, const void *buffer, size_t maxlen)
+ssize_t sendline(int sock, const void *buffer, size_t maxlen)
 {
 	ssize_t n;
 	if( (n = write(sock, buffer, maxlen)) < 0 )
