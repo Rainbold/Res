@@ -3,7 +3,7 @@
 #include <errno.h>
 #include "contrib.h"
 
-ssize_t readLine(int fd, void *buffer, size_t n) {
+ssize_t readline(int fd, void *buffer, size_t n) {
 
 }
 

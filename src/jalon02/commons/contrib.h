@@ -13,7 +13,6 @@
 /**
  * function to read a line on a fd
  */
-ssize_t
-readLine(int fd, void *buffer, size_t n);
+ssize_t readline(int fd, void *buffer, size_t n);
 
 #endif /* CONTRIB_H_ */

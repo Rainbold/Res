@@ -12,19 +12,22 @@
 #define SIZE_BUFFER 1000
 #define MAX_CLIENT_NB 20
 #define CLIENTS_NB 4
+#define USERNAME_LEN 50
 
 
 struct client_info
-{
-    int id;
-    uint32_t *remoteIP;
+{   
+    int sock;
+    char username[USERNAME_LEN];
+    struct sockaddr_in info;
+    socklen_t info_len;
 };
+
 
 struct server_info
 {
     int sock;
     int clients_nb;
-    int clients_sock[MAX_CLIENT_NB];
     pthread_t clients_thread[MAX_CLIENT_NB];
     struct sockaddr_in clients_info[MAX_CLIENT_NB];
     socklen_t client_info_len[MAX_CLIENT_NB];  
