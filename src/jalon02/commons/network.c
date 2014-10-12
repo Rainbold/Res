@@ -44,9 +44,9 @@ int do_socket(int domain, int type, int protocol) {
 	return fd;
 }
 
-void do_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-
-
+void do_connect(int sockfd, const struct sockaddr_in *addr, socklen_t addrlen) {
+	if( connect(sockfd, (struct sockaddr*)addr, addrlen)  != 0 )
+		error("Error with connect() in do_connect()");
 }
 
 void init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
@@ -61,11 +61,11 @@ void do_bind(const int fd, struct sockaddr_in *serv_addr) {
 		error("Error with bind() in do_bind()");
 }
 
-void do_accept(const int server_fd, int *client_fd,
-		struct sockaddr * client_addr) {
-
-
-
+void do_accept(const int server_fd, int *client_fd, struct sockaddr_in *client_addr, socklen_t addrlen) {
+	int fd = accept(server_fd, (struct sockaddr*)client_addr, &addrlen);
+	if(fd == -1)
+		error("Error with accept in do_accept()");
+	*client_fd = fd;
 }
 
 int do_read(const int socket, char buffer[256]) {

@@ -5,23 +5,17 @@
 //{daniel.negru,joachim.bruneau_-_queyreix,nicolas.herbaut}@ipb.fr
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include <resolv.h>
-#include <string.h>
-#include <sys/select.h>
-#include <stdlib.h>
-#include <pthread.h>
-
-#include "../commons/constant.h"
-#include "../commons/network.h"
 #include "server.h"
 
-void main(int argc, char** argv) {
+
+int main(int argc, char** argv) {
 
 	int sock;
+    pthread_t t_accept_conn;
 	struct sockaddr_in server_info;
 
 	if (argc != 2) {
-		fprintf(stderr, "Please specify local port to bind to\n");
+		fprintf(stderr, "Please specify a local port to bind to\n");
 		exit(-1);
 	}
 
@@ -40,6 +34,9 @@ void main(int argc, char** argv) {
 	//init the fdset
 
 	printf("Server listening on port %s\n", argv[1]);
+
+	//creation of the threads accepting the connections
+
 
 	while(1) {
 
