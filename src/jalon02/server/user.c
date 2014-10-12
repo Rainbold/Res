@@ -7,13 +7,13 @@
 
 #include "user.h"
 
-puser get_user_by_fd(const int fd) {
+struct user_t* get_user_by_fd(const int fd) {
 
 }
-puser get_user_by_uname(const char name[USERNAME_LEN]) {
+struct user_t* get_user_by_uname(const char name[USERNAME_LEN]) {
 
 }
-void add_user(const struct user aclient) {
+void add_user(const struct user_t aclient) {
 
 }
 

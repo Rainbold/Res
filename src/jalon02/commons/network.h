@@ -8,10 +8,7 @@
 #ifndef SERVER_H_SDFGEQHAEHZEGFR
 #define SERVER_H_SDFGEQHAEHZEGFR
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <stdbool.h>
+#include "constant.h"
 
 
 
@@ -47,16 +44,16 @@ void do_accept(const int server_fd, int *client_fd, struct sockaddr_in * client_
 void do_connect(int sockfd, const struct sockaddr_in *addr, socklen_t addrlen);
 
 /**
- * read a chuck of max 256 chars and return the count of char actually read
+ * read a chuck of max SIZE_BUFFER chars and return the count of char actually read
  * @returns the number of char actually read
  */
-int do_read(const int client_fd, char buffer[256]);
+int do_read(const int socket, char buffer[SIZE_BUFFER], int size);
 
 /**
  * write a string to this socket
  * @returns the number of char actually written
  */
-int do_write(const int client_socket_fd, const char buffer[256]);
+int do_write(const int client_socket_fd, const char buffer[SIZE_BUFFER]);
 
 
 

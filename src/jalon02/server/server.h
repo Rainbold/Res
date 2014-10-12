@@ -25,28 +25,43 @@ void handle_client_socket_event(int client_socket_fd);
 /**
  * parse a client input and react accordingly
  */
-void parse_client_input(const char buffer[256], const int client_socket_fd);
+void parse_client_input(const char buffer[SIZE_BUFFER], const int client_socket_fd);
 
 /**
  * Send a message to all users, except on the fd for the sender.
  */
-void send_broadcast_by_user_name(const char buffer[256], const char* uname_src);
-void send_broadcast_by_fd(const char buffer[256], const int fd);
+void send_broadcast_by_user_name(const struct connected_users* users_list, const char buffer[SIZE_BUFFER], const char* uname_src);
+void send_broadcast_by_fd(const char buffer[SIZE_BUFFER], const int fd);
 
 /**
  * Send a message to a user by username
  */
-void send_unicast(const char buffer[256], const char *uname,const char* uname_src);
+void send_unicast(const char buffer[SIZE_BUFFER], const char *uname,const char* uname_src);
 
 /**
  * Send a message to users by their usernames
  */
-void send_multicast(const char buffer[256], const char **unames,const char* uname_src);
+void send_multicast(const char buffer[SIZE_BUFFER], const char **unames,const char* uname_src);
 
 /**
  * main function that understands the type of packets
  */
-void process_client_request(const char buffer[256], const int client_socket_fd);
+void process_client_request(const char buffer[SIZE_BUFFER], const int client_socket_fd);
+
+/**
+ * Initialize the connected_users structure
+ */
+void init_users(int sock, struct connected_users* users_list);
+
+/**
+ * Accepts the incoming connections
+ */
+void* server_accepting(void* p_data);
+
+/**
+ * Handles the client's associated thread
+ */
+void* client_handling(void* p_data);
 
 
 #endif //SERVER_H_QSGPNSGPOQNSPGOSNDFG
