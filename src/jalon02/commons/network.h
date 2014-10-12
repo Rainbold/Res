@@ -39,13 +39,12 @@ void do_bind(const int fd, struct sockaddr_in *);
 /**
  * accept connections on the supplied file descriptor, filling up the sockaddr structure and the client_fd
  */
-void do_accept(const int server_fd, int *client_fd,
-		struct sockaddr * client_addr);
+void do_accept(const int server_fd, int *client_fd, struct sockaddr_in * client_addr, socklen_t addrlen);
 
 /**
  * Connect the provided socket to the supplied address
  */
-void do_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+void do_connect(int sockfd, const struct sockaddr_in *addr, socklen_t addrlen);
 
 /**
  * read a chuck of max 256 chars and return the count of char actually read

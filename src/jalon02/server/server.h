@@ -8,6 +8,8 @@
 #ifndef SERVER_H_QSGPNSGPOQNSPGOSNDFG
 #define SERVER_H_QSGPNSGPOQNSPGOSNDFG
 
+#include "../commons/constant.h"
+
 
 /**
  * handle the event when the server socket receives a new connection
