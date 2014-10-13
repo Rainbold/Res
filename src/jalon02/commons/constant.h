@@ -31,6 +31,9 @@
 // Size buffer server
 #define SIZE_BUFFER 512
 
+// Size msg buffer
+#define MSG_BUFFER 256
+
 // Username length
 #define USERNAME_LEN 32
 
@@ -62,7 +65,15 @@ struct connected_users {
 #endif
 
 #ifndef USER_H_
- 	#include "../server/user.h"
+    #include "../server/user.h"
+#endif
+
+#ifndef REGEX_H_
+    #include "regex_lib.h"
+#endif
+
+#ifndef COLORS_H_
+ 	#include "colors.h"
 #endif
 
 

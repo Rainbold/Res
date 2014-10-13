@@ -63,5 +63,12 @@ void* server_accepting(void* p_data);
  */
 void* client_handling(void* p_data);
 
+/**
+ * Change a specific username
+ */
+void nick(struct connected_users* users_list, char* name, int id);
+
+
+void send_msg(int sock, char* msg, char* color);
 
 #endif //SERVER_H_QSGPNSGPOQNSPGOSNDFG

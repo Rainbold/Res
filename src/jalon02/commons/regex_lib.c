@@ -5,11 +5,7 @@
  *      Author: root
  */
 
-#include <regex.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "regex_lib.h"
+#include "constant.h"
 
 regex_t regex_cmds[REGEX_CMD_NB];
 regex_t regex_match_cmd;
@@ -32,7 +28,7 @@ void regex_init()
 	err[FILEREQ]	= regcomp (&regex_cmds[FILEREQ],"^/filereq",REG_NOSUB);
 	err[FILERES]	= regcomp (&regex_cmds[FILERES],"^/fileres",REG_NOSUB);
 
-	sprintf(buf, "(^/[a-z]{1,6}) ([a-zA-Z0-9]{1,%d}) ?(.{0,%d})", USERNAME_LEN, BUFFER_LEN);
+	sprintf(buf, "(^/[a-z]{1,6}) ([a-zA-Z0-9]{1,%d}) ?(.{0,%d})", USERNAME_LEN, SIZE_BUFFER);
 	err[REGEX_CMD_NB]	= regcomp (&regex_match_cmd, buf, REG_EXTENDED);
 
 	memset(buf, 0, 128);
@@ -73,7 +69,7 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 		return ERROR;
 
 	memset(userorchannel, 0, USERNAME_LEN);
-	memset(message, 0, BUFFER_LEN);
+	memset(message, 0, MSG_BUFFER);
 
 	cmd = regex_cmd(buf);
 

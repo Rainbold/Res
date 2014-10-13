@@ -5,7 +5,7 @@
 //{daniel.negru,joachim.bruneau_-_queyreix,nicolas.herbaut}@ipb.fr
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include "server.h"
+#include "constant.h"
 
 int main(int argc, char** argv) {
 
@@ -38,6 +38,9 @@ int main(int argc, char** argv) {
 
 	//init the fdset
 
+	//regex initialization
+	regex_init();
+
 	printf("Server listening on port %s\n", argv[1]);
 
 	//creation of the threads accepting the connections
@@ -67,6 +70,8 @@ int main(int argc, char** argv) {
 		// send broadcast : "[Server] Server is shutting down\n"
 		// kill all threads
 		// close all client socket
+
+	regex_free();
 
 	// Clean up server socket
 	close(sock);

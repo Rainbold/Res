@@ -40,9 +40,6 @@ typedef enum
 	QUITCHANNEL,// 20
 } cmd_t;
 
-#define USERNAME_LEN 32
-#define BUFFER_LEN 512
-#define TXT_LEN 256
 #define REGEX_CMD_NB 10
 
 // Compile regex

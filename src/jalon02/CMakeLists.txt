@@ -33,6 +33,7 @@ target_link_libraries (RE216_JALON02_CLIENT ${CMAKE_THREAD_LIBS_INIT})
 SET(SRC_SERVER
 server/server_app.c
 server/server_lib.c
+commons/regex_lib.c
 )
 
 find_package(Threads)
