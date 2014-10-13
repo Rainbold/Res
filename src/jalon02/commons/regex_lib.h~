@@ -1,0 +1,46 @@
+/*
+ * regex.h
+ *
+ *  Created on: 12 oct. 2014
+ *      Author: root
+ */
+
+#ifndef REGEX_H_
+#define REGEX_H_
+
+typedef enum
+{
+	NICK, // 0
+	WHO, // 1
+	WHOIS, // 2
+	QUIT, // 3
+	MSGALL, // 4
+	MSG, // 5
+	CREATE, // 6
+	JOIN,// 7
+	FILE, // 8
+
+	// other enum needed
+	MSGCHANNEL, // 9
+	QUITCHANNEL, // 10
+	MATCH, // 11
+} regex_cmd_t;
+
+#define USERNAME_LEN 32
+#define BUFFER_LEN 512
+#define TXT_LEN 256
+#define REGEX_CMD_NB 9
+
+// Compile regex
+void regex_init();
+
+// Return the cmd enum
+regex_cmd_t regex_cmd(const char* buf);
+
+// Return the cmd enum and write argument in the two buffers
+regex_cmd_t regex_match(const char* buf, char userorchannel[], char message[]);
+
+// Free memory
+void regex_free();
+
+#endif /* REGEX_H_ */
