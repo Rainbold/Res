@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/lyte/Documents/Projets/re216/src/jalon01/client.c
+/root/Enseirb/res/src/jalon01/client.c
 stdlib.h
 -
 unistd.h
@@ -16,6 +16,8 @@ stdio.h
 string.h
 -
 errno.h
+-
+arpa/inet.h
 -
 sys/types.h
 -

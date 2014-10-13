@@ -2,6 +2,10 @@ CONSTANTES
     NB_CLIENT_MAX 20
     BUFFER_LEN 256
     USERNAME_LEN 32
+    BUFFER_CMD 10
+
+
+
 SERVEUR
     Fonctionnalités
         Contrôle du serveur en ligne de commandes
@@ -70,10 +74,11 @@ Common :
 - common.h
 - network.c (fonctions reseaux, socket, bind, listen...)
 - constant.h (define)
+- regex.c (expressions regulières)
+- regex.h
 Server :
 - server_app.c (code principal)
 - server_lib.c (fonctions et threads)
 - server_lib.h
 Client :
 TODO
-

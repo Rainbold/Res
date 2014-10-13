@@ -1,4 +1,4 @@
-# Install script for directory: /home/lyte/Documents/Projets/re216/src/jalon02
+# Install script for directory: /root/Enseirb/res/src/jalon02
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
