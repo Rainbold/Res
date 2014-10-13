@@ -22,9 +22,12 @@ client/client.c
 client/client_lib.c
 )
 
+
 find_package(Threads)
+
 add_executable(RE216_JALON02_CLIENT ${SRC_CLIENT} ${SRC_COMMONS})
 target_link_libraries (RE216_JALON02_CLIENT ${CMAKE_THREAD_LIBS_INIT})
+
 
 #add here source files you need to compile and link to the server app
 SET(SRC_SERVER
@@ -33,5 +36,7 @@ server/server_lib.c
 )
 
 find_package(Threads)
+
 add_executable(RE216_JALON02_SERVER  ${SRC_SERVER} ${SRC_COMMONS})
+
 target_link_libraries (RE216_JALON02_SERVER ${CMAKE_THREAD_LIBS_INIT})

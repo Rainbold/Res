@@ -5,22 +5,7 @@
 //{daniel.negru,joachim.bruneau_-_queyreix,nicolas.herbaut}@ipb.fr
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include <stdio.h>
-#include <regex.h>
-#include <resolv.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <string.h>
-#include <stdbool.h>
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <regex.h>
-#include "user.h"
-#include "callbacks.h"
-#include "colors.h"
 #include "network.h"
 
 void error(const char* msg) {
@@ -68,12 +53,26 @@ void do_accept(const int server_fd, int *client_fd, struct sockaddr_in *client_a
 	*client_fd = fd;
 }
 
-int do_read(const int socket, char buffer[256]) {
+int do_read(const int socket, char buffer[SIZE_BUFFER], int size) {
+	char buffer_aux[SIZE_BUFFER] = "";
+	int n = read(socket, buffer_aux, size);
+	
+	if( n < 0 )
+		error("ERROR with read() in do_read()");
+	else if( n == 0 )
+		error("Server-related issues");
 
+	// deletion of the /r/n at the end of the received string
+	strncpy(buffer, buffer_aux, strlen(buffer_aux)-2);
+
+	return n;
 }
 
-int do_write(const int socket, const char buffer[256]) {
+int do_write(const int socket, const char buffer[SIZE_BUFFER]) {
+	ssize_t n;
+	if( (n = write(socket, buffer, strlen(buffer))) < 0 )
+		error("ERROR with write() in do_write()");
 
-
+	return n;
 }
 
