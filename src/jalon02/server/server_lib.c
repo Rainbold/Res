@@ -142,7 +142,6 @@ void* client_handling(void* p_data)
     sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
     send_msg(user->sock, name, buffer, ANSI_COLOR_YELLOW);
 
-
     cont = 1;
     while(cont)
     {
@@ -286,7 +285,6 @@ void who(struct connected_users* users_list, int id)
 
     send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
 }
-
 
 void send_msg(int sock, char* username, char* msg, char* color)
 {

@@ -75,5 +75,4 @@ struct connected_users {
 #include "regex_lib.h"
 #include "colors.h"
 
-
 #endif /* CONSTANT_H_ */

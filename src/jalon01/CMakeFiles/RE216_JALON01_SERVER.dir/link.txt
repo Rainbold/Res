@@ -1,0 +1,1 @@
+/usr/bin/gcc      CMakeFiles/RE216_JALON01_SERVER.dir/server.c.o  -o RE216_JALON01_SERVER -rdynamic -lpthread 

@@ -1,0 +1,84 @@
+CONSTANTES
+    NB_CLIENT_MAX 20
+    BUFFER_LEN 256
+    USERNAME_LEN 32
+    BUFFER_CMD 10
+
+
+
+SERVEUR
+    Fonctionnalités
+        Contrôle du serveur en ligne de commandes
+            Processus principal
+        Connexion d'au plus NB_CLIENT_MAX clients
+            Utilisation de threads
+        Accept les connexions en parallèle
+            Threads Accept qui crée les threads Clients (contient un tableau de threads)
+        Interaction entre le serveur et les clients
+            Interprétation des messages reçus par les clients (regex)
+                /nick [user] : change le nom d'utilisateur du client qui vient de se connecter 
+                    (obligatoire à la connexion)
+                /who : donne la liste des utilisateurs connectés
+                /whois [user] : donne des informations sur un client
+                /quit : déconnexion du client
+                /msgall [message] : broadcast de [message]
+                /msg [user] [message] : unicast de [user] vers [message]
+                Gestion des channels
+                    /create [channel_name] : création d'un channel nommé [channel_name]
+                    /join [channel_name] : connexion au channel nommé [channel_name]
+                    /quit [channel_name] : déconnexion du channel nommé [channel_name]
+                    Un channel existe si au moins un utilisateur est connecté dessus, sinon il est 
+                    détruit sinon.
+                    Lorsqu'un client est connecté à un channel, les messages peuvent être    
+                    envoyés sans utilisation de commande
+CLIENT
+    Fonctionnalités
+        Envoie de chaines de caractères et de commandes
+        Interpréation de commandes provenant du serveur (/file)
+            Utilisation de threads pour envoyer un fichier ou en recevoir
+        Réception :
+            /msg [user] [message] : réception d'un message [message] de [user]
+        
+    Structures de données
+        1. Structure client
+            struct user {
+                int sock;
+                char username[USERNAME_LEN]; // Teste pour savoir si le client est connecté
+                struct sockaddr_in info;
+                socklen_t info_len;
+                int connection_time;
+                pthread_mutex_t mutex; // mutex de protection de sock
+            };
+        2. Structure clients connectés
+            struct connected_users {
+                struct user* users[NB_CLIENT_MAX];
+                int current_user;
+                pthread_mutex_t mutex; // mutex de protection de users[]
+            };
+        3. Structure d'envoie de donnée pour les threads Client
+            struct data_thread_client {
+                struct connected_user* tab
+    
+- pointeur de clients connectés
+- position tableau
+Règles :
+username :
+    - pas d'espace
+    - alphanumérique
+    
+Fonction à faire:
+    - fd_by_user(char* user) // avec lock mutex de users[]
+FICHIERS
+Common :
+- common.c (fonction commune du genre readlin/sendline)
+- common.h
+- network.c (fonctions reseaux, socket, bind, listen...)
+- constant.h (define)
+- regex.c (expressions regulières)
+- regex.h
+Server :
+- server_app.c (code principal)
+- server_lib.c (fonctions et threads)
+- server_lib.h
+Client :
+TODO
