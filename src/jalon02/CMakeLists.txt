@@ -20,6 +20,7 @@ SET(SRC_COMMONS
 SET(SRC_CLIENT
 client/client.c
 client/client_lib.c
+commons/regex_lib.c
 )
 
 

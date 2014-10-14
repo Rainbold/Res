@@ -23,5 +23,12 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define COLOR_PM		36
+#define COLOR_CHANNEL	32
+#define COLOR_ALL		35
+#define COLOR_SERVER	33
+#define COLOR_ERROR		31
+
+#define colour(param) printf("\x1b[%dm",param)
 
 #endif /* COLORS_H_ */

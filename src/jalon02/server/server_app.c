@@ -5,7 +5,7 @@
 //{daniel.negru,joachim.bruneau_-_queyreix,nicolas.herbaut}@ipb.fr
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include "constant.h"
+#include "server.h"
 
 int main(int argc, char** argv) {
 

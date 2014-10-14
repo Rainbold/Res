@@ -25,6 +25,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+//#include "../server/server.h"
+//#include "../server/user.h"
+#include "regex_lib.h"
+#include "colors.h"
+#include "contrib.h"
+#include "network.h"
+
 // Max client
 #define CLIENTS_NB 3
 
@@ -34,13 +41,11 @@
 // Size msg buffer
 #define MSG_BUFFER 256
 
-// Username length
+// Username length same as channel length
 #define USERNAME_LEN 32
 
-
-#ifndef SERVER_H_SDFGEQHAEHZEGFR
- 	#include "network.h"
-#endif
+// Read buffer length in clients
+#define READ_BUFFER 1024
 
 struct user_t {
     int sock;
@@ -59,22 +64,5 @@ struct connected_users {
     pthread_mutex_t mutex; // mutex de protection de users[]
     struct user_t users[CLIENTS_NB];
 };
-
-#ifndef SERVER_H_QSGPNSGPOQNSPGOSNDFG
- 	#include "../server/server.h"
-#endif
-
-#ifndef USER_H_
-    #include "../server/user.h"
-#endif
-
-#ifndef REGEX_H_
-    #include "regex_lib.h"
-#endif
-
-#ifndef COLORS_H_
- 	#include "colors.h"
-#endif
-
 
 #endif /* CONSTANT_H_ */

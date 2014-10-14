@@ -53,25 +53,32 @@ void do_accept(const int server_fd, int *client_fd, struct sockaddr_in *client_a
 	*client_fd = fd;
 }
 
-int do_read(const int socket, char buffer[SIZE_BUFFER], int size) {
-	char buffer_aux[SIZE_BUFFER] = "";
-	int n = read(socket, buffer_aux, size);
+int do_read(const int socket, char buffer[], int size)
+{
+	int n = read(socket, buffer, size);
 	
 	if( n < 0 )
 		error("ERROR with read() in do_read()");
-	else if( n == 0 )
-		error("Server-related issues");
 
 	// deletion of the /r/n at the end of the received string
-	strncpy(buffer, buffer_aux, strlen(buffer_aux)-2);
+	//strncpy(buffer, buffer_aux, strlen(buffer_aux)-2);
+	buffer[n] = 0;
 
 	return n;
 }
 
-int do_write(const int socket, const char buffer[SIZE_BUFFER]) {
+int do_write(const int socket, const char buffer[SIZE_BUFFER])
+{
 	ssize_t n;
-	if( (n = write(socket, buffer, strlen(buffer))) < 0 )
-		error("ERROR with write() in do_write()");
+	ssize_t rest = strlen(buffer) + 1;
+
+	do {
+		n = write(socket, buffer, rest);
+
+		if (n < 0 )	error("ERROR with write() in do_write()");
+
+		rest -= n;
+	} while (rest > 0);
 
 	return n;
 }

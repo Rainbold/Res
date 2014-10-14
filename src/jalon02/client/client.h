@@ -1,25 +1,28 @@
 #ifndef CLIENT_H_sqdfqsdfqsdf
 #define CLIENT_H_sqdfqsdfqsdf
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
+#include "../commons/constant.h"
+
+#define PM_COLOR
+#define CHANNEL_COLOR
+#define ALL_COLOR
+#define SERVER_COLOR
+#define ERROR_MSG
 
 /**
  * a function that given the address and the port fill the addrinfo
  */
-void get_addr_info(const char* address, const char* port,
-		struct addrinfo** res);
+int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port);
 
 /**
  * a function that is called when we receive a message from the server
  */
-void handle_server_message(char buffer[256]);
+void* handle_server_message(void* psock);
 
 /**
  * a function called with user input
  */
-void handle_client_message(const int socket, char buffer[256]);
+void handle_client_message(int sock, char outbuf[SIZE_BUFFER]);
 
 /**
  * function called when a file is received
