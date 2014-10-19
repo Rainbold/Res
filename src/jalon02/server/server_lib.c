@@ -20,25 +20,41 @@ void send_broadcast_by_fd(const char buffer[SIZE_BUFFER], const int fd) {
 
 }
 
-void send_broadcast_by_user_name(const struct connected_users* users_list, const char buffer[SIZE_BUFFER], const char* uname_src) {
+void send_broadcast_by_user_name(const struct connected_users* users_list, const char buffer[MSG_BUFFER], const char uname_src[USERNAME_LEN]) {
     int i=0;
-    char str[SIZE_BUFFER+50];
-    strcpy(str, uname_src);
+    char str[SIZE_BUFFER] = "";
+    strcpy(str, "/msgall ");
+    strcat(str, uname_src);
     strcat(str, " ");
     strcat(str, buffer);
 
     for(i=0; i<CLIENTS_NB; i++)
     {
-        if(users_list->users[i].sock != -1)
-        {
-            do_write(users_list->users[i].sock, str);
-        }
+        // sends a message to all the connected users except to the one who sent it
+        if(users_list->users[i].sock != -1 && strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, str, "");
+        else if( !strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, "", "");
     }
 }
 
-void send_unicast(const char buffer[SIZE_BUFFER], const char *uname_dest,
+void send_unicast(const struct connected_users* users_list, const char buffer[MSG_BUFFER], const char *uname_dest,
 		const char* uname_src) {
+    int i=0;
+    char str[SIZE_BUFFER] = "";
+    strcpy(str, "/msg ");
+    strcat(str, uname_src);
+    strcat(str, " ");
+    strcat(str, buffer);
 
+    for(i=0; i<CLIENTS_NB; i++)
+    {
+        // sends a message to all the connected users except to the one who sent it
+        if( !strcmp(users_list->users[i].username, uname_dest) )
+            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, str, "");
+        else if( !strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, "", "");
+    }
 }
 
 void send_multicast(const char buffer[SIZE_BUFFER], const char **unames,
@@ -65,6 +81,7 @@ void init_users(int sock, struct connected_users* users_list) {
         users_list->users[i].info_len = sizeof(struct sockaddr_in);
         users_list->users[i].connection_time = 0;
         users_list->users[i].timer = 0;
+        users_list->users[i].channel = -1;
     }
 }
 
@@ -85,7 +102,6 @@ void* server_accepting(void* p_data)
                 pthread_mutex_lock( &(users_list->mutex) );
                 users_list->current_user = i;
                 pthread_create(  &(users_list->users[i].thread), NULL, client_handling, users_list );
-                printf("New client : %d\n", i);
             }
         }
     }
@@ -98,7 +114,7 @@ void* client_handling(void* p_data)
     struct connected_users* users_list = (struct connected_users*) p_data;
     int id = users_list->current_user;
     int cont = 1;
-    struct user_t user = users_list->users[id];
+    struct user_t* user = &(users_list->users[id]);
     char name[USERNAME_LEN];
     char msg[MSG_BUFFER];
     char buffer[SIZE_BUFFER];
@@ -106,20 +122,25 @@ void* client_handling(void* p_data)
 
     pthread_mutex_unlock( &(users_list->mutex) );
 
-    send_msg(user.sock, "Welcome on our server !\r\n[Server] Please logon with /nick <your pseudo>\r\n", ANSI_COLOR_RED);
+    user->t = time(NULL);
+    user->tm = *localtime( &(user->t) );
+
+    send_msg(user->sock, "new_client", "[Server] Please logon with /nick <your pseudo>\r\n", ANSI_COLOR_YELLOW);
     
     // Asks for a new username as long as the command entered is invalid
     do {
-        do_read(user.sock, buffer, SIZE_BUFFER);
+        do_read(user->sock, buffer, SIZE_BUFFER);
         cmd = regex_match(buffer, name, msg);
         if(cmd == NICK)
             cont = 0;
         else
-            send_msg(user.sock, "[Server] You have to login using the command /nick <your pseudo>\r\n", ANSI_COLOR_YELLOW);
+            send_msg(user->sock, "new_client", "[Server] You have to login using the command /nick <your pseudo>\r\n", ANSI_COLOR_RED);
     } while(cont);
 
     nick(users_list, name, id);
-    
+
+    sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
+    send_msg(user->sock, name, buffer, ANSI_COLOR_YELLOW);
 
     cont = 1;
     while(cont)
@@ -127,7 +148,8 @@ void* client_handling(void* p_data)
         memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
         memset(name, 0, sizeof(char)*USERNAME_LEN);
         memset(msg, 0, sizeof(char)*MSG_BUFFER);
-        do_read(user.sock, buffer, SIZE_BUFFER);
+        do_read(user->sock, buffer, SIZE_BUFFER);
+	printf("raw: %s", buffer);
         cmd = regex_match(buffer, name, msg);
 
         switch(cmd)
@@ -136,7 +158,19 @@ void* client_handling(void* p_data)
                 nick(users_list, name, id);
                 break;
             case MSGALL:
-                send_broadcast_by_user_name(users_list, buffer, user.username);
+                send_broadcast_by_user_name(users_list, msg, user->username);
+                break;
+            case MSG:
+                send_unicast(users_list, msg, name, user->username);
+                break;
+            case WHOIS:
+                whois(users_list, name, id);
+                break;
+            case WHO:
+                who(users_list, id);
+                break;
+            default:
+                send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
                 break;
         }
     }
@@ -144,51 +178,122 @@ void* client_handling(void* p_data)
     return NULL;
 }
 
-void nick(struct connected_users* users_list, char* name, int id)
+int find_username_id(struct connected_users* users_list, char* name)
+{
+    int i=0;
+
+    for(i=0; i<CLIENTS_NB; i++)
+        if(!strcmp(users_list->users[i].username, name) )
+            return i;
+
+    return -1;
+}
+
+void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
 {
     int i=0;
     int cont = 1;
     int verif = 1;
     char msg[MSG_BUFFER];
     char buffer[SIZE_BUFFER];
+    char name[USERNAME_LEN];
     cmd_t cmd;
 
-    do {
-        for(i=0; i<CLIENTS_NB; i++)
-        {
-            if(!strcmp(name, users_list->users[i].username))
-                verif = 0;
-        }
+    strcpy(name, pname);
 
-        if(!verif)
-        {
-            send_msg(users_list->users[id].sock, "[Server] This username is already taken\r\n[Server] Please logon with /nick <your pseudo>\r\n", ANSI_COLOR_MAGENTA);
-            memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-            memset(name, 0, sizeof(char)*USERNAME_LEN);
-            do_read(users_list->users[id].sock, buffer, SIZE_BUFFER);
-            cmd = regex_match(buffer, name, msg);
-            if(cmd != NICK)
+    //If the new username is different from the old one
+    if( strcmp(name, users_list->users[id].username) )
+    {
+        do {
+            for(i=0; i<CLIENTS_NB; i++)
             {
-                send_msg(users_list->users[id].sock, "This username is already taken, please enter another one : \r\n",ANSI_COLOR_MAGENTA);
-                continue;
+                if(!strcmp(name, users_list->users[i].username))
+                    verif = 0;
             }
-            verif = 1;
-        }
-        else 
-        {
-            pthread_mutex_lock( &(users_list->mutex) );
-            strcpy(users_list->users[id].username, name);
-            pthread_mutex_unlock( &(users_list->mutex) );
-            cont = 0;
-        }
-    } while(cont);
+
+            if(!verif)
+            {
+                if( !strcmp(users_list->users[id].username, "") )
+                    strcpy(name, "new_client");
+                else
+                    strcpy(name, users_list->users[id].username);
+
+                send_msg(users_list->users[id].sock, name, "[Server] This username is already taken. Please use /nick <your pseudo>\r\n", ANSI_COLOR_RED);
+                memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
+                memset(name, 0, sizeof(char)*USERNAME_LEN);
+                do_read(users_list->users[id].sock, buffer, SIZE_BUFFER);
+                cmd = regex_match(buffer, name, msg);
+                if(cmd != NICK)
+                    continue;
+                verif = 1;
+            }
+            else 
+            {
+                pthread_mutex_lock( &(users_list->mutex) );
+                strcpy(users_list->users[id].username, name);
+                pthread_mutex_unlock( &(users_list->mutex) );
+                cont = 0;
+            }
+        } while(cont);
+
+        memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
+        sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
+
+        send_msg(users_list->users[id].sock, users_list->users[id].username, "", ANSI_COLOR_YELLOW);
+        send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+    }
+    else
+        send_msg(users_list->users[id].sock, users_list->users[id].username, "", ANSI_COLOR_YELLOW);
 }
 
-void send_msg(int sock, char* msg, char* color)
+void whois(struct connected_users* users_list, char* name, int id)
+{
+    int id_target = find_username_id(users_list, name);
+    char buffer[SIZE_BUFFER] = "";
+
+    struct tm tm;
+    struct sockaddr_in info;
+
+    if(id_target >= 0)
+    {
+        tm = users_list->users[id_target].tm;
+        info = users_list->users[id_target].info;
+        sprintf(buffer, "[Server] %s connected since %d/%d/%d@%d:%d:%d from %s:%d\r\n", 
+                name, tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, tm.tm_sec, inet_ntoa(info.sin_addr), info.sin_port);
+    }
+    else
+    {
+        sprintf(buffer, "[Server] Unknown user : %s\r\n", name);
+    }
+    
+    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+}
+
+void who(struct connected_users* users_list, int id)
+{
+    int i=0;
+    char buffer[USERNAME_LEN*CLIENTS_NB+100] = "[Server] Online users :\r\n";
+
+    for(i=0; i<CLIENTS_NB; i++)
+    {
+        if(users_list->users[i].sock != -1)
+        {
+            strcat(buffer, "\t- ");
+            strcat(buffer, users_list->users[i].username);
+            strcat(buffer, "\r\n");
+        }
+    }
+
+    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+}
+
+void send_msg(int sock, char* username, char* msg, char* color)
 {
     char buffer[SIZE_BUFFER+10];
     strcpy(buffer, color);
     strcat(buffer, msg);
     strcat(buffer, ANSI_COLOR_RESET);
+    strcat(buffer, username);
+    strcat(buffer, "> ");
     do_write(sock, buffer);
 }

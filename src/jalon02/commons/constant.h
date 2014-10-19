@@ -54,8 +54,17 @@ struct user_t {
     socklen_t info_len;
     int connection_time;
     float timer;
+    int channel;
     pthread_mutex_t mutex;
     pthread_t thread;
+    time_t t;
+    struct tm tm;
+};
+
+struct channel_t {
+    int id;
+    char name[USERNAME_LEN];
+    int nb_users;
 };
 
 struct connected_users {
@@ -63,6 +72,7 @@ struct connected_users {
     int current_user;
     pthread_mutex_t mutex; // mutex de protection de users[]
     struct user_t users[CLIENTS_NB];
+    struct channel_t channels[CLIENTS_NB];
 };
 
 #endif /* CONSTANT_H_ */
