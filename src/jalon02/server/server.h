@@ -43,7 +43,7 @@ void send_unicast(const struct connected_users* users_list, const char buffer[SI
 /**
  * Send a message to users by their usernames
  */
-void send_multicast(const char buffer[SIZE_BUFFER], const char **unames,const char* uname_src);
+void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER], char *cname, char* uname_src);
 
 /**
  * main function that understands the type of packets
@@ -71,6 +71,11 @@ void* client_handling(void* p_data);
 int find_username_id(struct connected_users* users_list, char* name);
 
 /**
+ * Returns the id associated to the channel name
+ */
+int find_channel_id(struct connected_users* users_list, char* name);
+
+/**
  * Changes a specific username
  */
 void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id);
@@ -85,7 +90,24 @@ void whois(struct connected_users* users_list, char* name, int id);
  */
 void who(struct connected_users* users_list, int id);
 
+/**
+ * Disconnects the user
+ */
+void quit(struct connected_users* users_list, int id);
+
+/**
+ * Creates a channel called name
+ */
+void create(struct connected_users* users_list, char* name, int id);
+
+/**
+ * Joins a channel called name
+ */
+void join(struct connected_users* users_list, char* name, int id);
+
 
 void send_msg(int sock, char* username, char* msg, char* color);
+
+// void command(cmd_t cmd, char* buffer, char* argv, ...);
 
 #endif //SERVER_H_QSGPNSGPOQNSPGOSNDFG

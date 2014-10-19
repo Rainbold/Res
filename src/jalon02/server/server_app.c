@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
 		exit(-1);
 	}
 
+
 	//init a fresh socket
     sock = do_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		

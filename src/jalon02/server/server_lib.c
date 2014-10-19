@@ -23,7 +23,8 @@ void send_broadcast_by_fd(const char buffer[SIZE_BUFFER], const int fd) {
 void send_broadcast_by_user_name(const struct connected_users* users_list, const char buffer[MSG_BUFFER], const char uname_src[USERNAME_LEN]) {
     int i=0;
     char str[SIZE_BUFFER] = "";
-    strcpy(str, "/msgall ");
+
+    strcpy(str, "/cmsgall ");
     strcat(str, uname_src);
     strcat(str, " ");
     strcat(str, buffer);
@@ -42,6 +43,7 @@ void send_unicast(const struct connected_users* users_list, const char buffer[MS
 		const char* uname_src) {
     int i=0;
     char str[SIZE_BUFFER] = "";
+
     strcpy(str, "/msg ");
     strcat(str, uname_src);
     strcat(str, " ");
@@ -57,9 +59,25 @@ void send_unicast(const struct connected_users* users_list, const char buffer[MS
     }
 }
 
-void send_multicast(const char buffer[SIZE_BUFFER], const char **unames,
-		const char* uname_src) {
+void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER], char *cname, char* uname_src) 
+{
+    int i=0;
+    char str[SIZE_BUFFER] = "";
+    int id_chan = find_channel_id(users_list, cname);
 
+    strcpy(str, "/chan ");
+    strcat(str, uname_src);
+    strcat(str, " ");
+    strcat(str, buffer);
+
+    for(i=0; i<CLIENTS_NB; i++)
+    {
+        // sends a message to all the connected users except to the one who sent it
+        if( users_list->users[i].channel == id_chan && strcmp(users_list->users[i].username, uname_src) && users_list->users[i].sock != -1)
+            send_msg(users_list->users[i].sock, "", str, "");
+        else if( !strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, users_list->users[i].username, "", "");
+    }
 }
 
 void process_client_request(const char buffer[SIZE_BUFFER], const int client_socket_fd) {
@@ -82,6 +100,10 @@ void init_users(int sock, struct connected_users* users_list) {
         users_list->users[i].connection_time = 0;
         users_list->users[i].timer = 0;
         users_list->users[i].channel = -1;
+
+        users_list->channels[i].id = -1;
+        strcpy(users_list->channels[i].name, "");
+        users_list->channels[i].nb_users = -1;
     }
 }
 
@@ -168,8 +190,20 @@ void* client_handling(void* p_data)
             case WHO:
                 who(users_list, id);
                 break;
+            case QUIT:
+                quit(users_list, id);
+                break;
+            case CREATE:
+                create(users_list, name, id);
+                break;
+            case JOIN:
+                join(users_list, name, id);
+                break;
             default:
-                send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
+                if(user->channel == -1)
+                    send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
+                else
+                    send_multicast(users_list, buffer, users_list->channels[user->channel].name, user->username);
                 break;
         }
     }
@@ -183,6 +217,17 @@ int find_username_id(struct connected_users* users_list, char* name)
 
     for(i=0; i<CLIENTS_NB; i++)
         if(!strcmp(users_list->users[i].username, name) )
+            return i;
+
+    return -1;
+}
+
+int find_channel_id(struct connected_users* users_list, char* name)
+{
+    int i=0;
+
+    for(i=0; i<CLIENTS_NB; i++)
+        if(!strcmp(users_list->channels[i].name, name) )
             return i;
 
     return -1;
@@ -228,7 +273,10 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
             }
             else 
             {
+                memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
                 pthread_mutex_lock( &(users_list->mutex) );
+                sprintf(buffer, "/nick %s %s", name, inet_ntoa(users_list->users[id].info.sin_addr));
+                send_msg(users_list->users[id].sock, name, buffer, "");
                 strcpy(users_list->users[id].username, name);
                 pthread_mutex_unlock( &(users_list->mutex) );
                 cont = 0;
@@ -247,6 +295,7 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
 
 void whois(struct connected_users* users_list, char* name, int id)
 {
+    pthread_mutex_lock( &(users_list->mutex) );
     int id_target = find_username_id(users_list, name);
     char buffer[SIZE_BUFFER] = "";
 
@@ -266,6 +315,7 @@ void whois(struct connected_users* users_list, char* name, int id)
     }
     
     send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 void who(struct connected_users* users_list, int id)
@@ -273,6 +323,7 @@ void who(struct connected_users* users_list, int id)
     int i=0;
     char buffer[USERNAME_LEN*CLIENTS_NB+100] = "[Server] Online users :\r\n";
 
+    pthread_mutex_lock( &(users_list->mutex) );
     for(i=0; i<CLIENTS_NB; i++)
     {
         if(users_list->users[i].sock != -1)
@@ -284,6 +335,60 @@ void who(struct connected_users* users_list, int id)
     }
 
     send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+    pthread_mutex_unlock( &(users_list->mutex) );
+}
+
+void quit(struct connected_users* users_list, int id)
+{
+    pthread_mutex_lock( &(users_list->mutex) );
+    send_msg(users_list->users[id].sock, users_list->users[id].username, "Goodbye.\r\n", ANSI_COLOR_YELLOW);
+    close(users_list->users[id].sock);
+    users_list->users[id].sock = -1;
+    memset( &(users_list->users[id].username), '\0', sizeof(char)*USERNAME_LEN);
+    pthread_mutex_unlock( &(users_list->mutex) );
+    pthread_cancel(users_list->users[id].thread);
+}
+
+void create(struct connected_users* users_list, char* name, int id)
+{
+    pthread_mutex_lock( &(users_list->mutex) );
+
+    char buffer[SIZE_BUFFER] = "/join ";
+    int i=0;
+
+    for(i=0; i<CLIENTS_NB; i++)
+    {
+        if(users_list->channels[i].id == -1)
+        {
+            users_list->channels[i].id = i;
+            strcpy(users_list->channels[i].name, name);            
+            break;
+        }
+    }
+
+    pthread_mutex_unlock( &(users_list->mutex) );
+    join(users_list, name, id);
+    pthread_mutex_lock( &(users_list->mutex) );
+
+    strcat(buffer, name);
+    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, "");
+    pthread_mutex_unlock( &(users_list->mutex) );
+}
+
+void join(struct connected_users* users_list, char* name, int id)
+{
+    pthread_mutex_lock( &(users_list->mutex) );
+
+    int i=0;
+    int id_chan = find_channel_id(users_list, name);
+
+    users_list->users[id].channel = id_chan;
+    users_list->channels[id_chan].nb_users++;
+
+    //send_msg(users_list->users[id].sock, users_list->users[id].username, "Welcome\r\n", "");
+    send_multicast(users_list, "HE LOGGED IIIIIIN", name, "[Server]");
+
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 void send_msg(int sock, char* username, char* msg, char* color)
@@ -296,3 +401,19 @@ void send_msg(int sock, char* username, char* msg, char* color)
     strcat(buffer, "> ");
     do_write(sock, buffer);
 }
+
+// void command(cmd_t cmd, char* buffer, char* argv, ...)
+// {
+//     va_list ap;
+//     char* arg;
+
+//     va_start(ap, argv);
+
+//     do {
+//         printf("%s\n", arg);
+//         if( strcpy(arg, va_arg(ap, char*)) == NULL )
+//             break;
+//     } while(arg != NULL);
+
+//     va_end(ap);
+// }

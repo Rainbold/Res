@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -26,7 +27,7 @@
 #include <sys/types.h>
 
 // Max client
-#define CLIENTS_NB 3
+#define CLIENTS_NB 4
 
 // Size buffer server
 #define SIZE_BUFFER 512
@@ -38,9 +39,37 @@
 #define USERNAME_LEN 32
 
 
-#ifndef SERVER_H_SDFGEQHAEHZEGFR
- 	#include "network.h"
-#endif
+typedef enum
+{
+    // cmds
+    NICK,       // 0
+    WHOIS,      // 1
+    WHO,        // 2
+    QUIT,       // 3
+    MSGALL,     // 4
+    MSG,        // 5
+    CREATE,     // 6
+    JOIN,       // 7
+    FILEREQ,    // 8
+    FILERES,    // 9
+
+    // error in cmds
+    ERRNICK,    // 10
+    ERRWHOIS,   // 11
+    ERRMSGALL,  // 12
+    ERRMSG,     // 13
+    ERRCREATE,  // 14
+    ERRJOIN,    // 15
+    ERRFILEREQ, // 16
+    ERRFILERES, // 17
+
+    // Global error
+    ERROR,      // 18
+
+    // other
+    MSGCHANNEL, // 19
+    QUITCHANNEL,// 20
+} cmd_t;
 
 struct user_t {
     int sock;
@@ -59,11 +88,12 @@ struct user_t {
 struct channel_t {
     int id;
     char name[USERNAME_LEN];
+    pthread_mutex_t mutex;
     int nb_users;
 };
 
 struct connected_users {
-	int sock_serv;
+    int sock_serv;
     int current_user;
     pthread_mutex_t mutex; // mutex de protection de users[]
     struct user_t users[CLIENTS_NB];
@@ -74,5 +104,6 @@ struct connected_users {
 #include "../server/user.h"
 #include "regex_lib.h"
 #include "colors.h"
+#include "network.h"
 
 #endif /* CONSTANT_H_ */
