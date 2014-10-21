@@ -356,22 +356,28 @@ void create(struct connected_users* users_list, char* name, int id)
     char buffer[SIZE_BUFFER] = "/join ";
     int i=0;
 
-    for(i=0; i<CLIENTS_NB; i++)
+    if( find_channel_id(users_list, name) == -1 )
     {
-        if(users_list->channels[i].id == -1)
+        for(i=0; i<CLIENTS_NB; i++)
         {
-            users_list->channels[i].id = i;
-            strcpy(users_list->channels[i].name, name);            
-            break;
+            if(users_list->channels[i].id == -1)
+            {
+                users_list->channels[i].id = i;
+                strcpy(users_list->channels[i].name, name);            
+                break;
+            }
         }
+
+        pthread_mutex_unlock( &(users_list->mutex) );
+        join(users_list, name, id);
+        pthread_mutex_lock( &(users_list->mutex) );
+
+        strcat(buffer, name);
+        send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, "");
     }
+    else
+        send_msg(users_list->users[id].sock, users_list->users[id].username, "[Server] This channel name already exists\r\n", ANSI_COLOR_RED);
 
-    pthread_mutex_unlock( &(users_list->mutex) );
-    join(users_list, name, id);
-    pthread_mutex_lock( &(users_list->mutex) );
-
-    strcat(buffer, name);
-    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, "");
     pthread_mutex_unlock( &(users_list->mutex) );
 }
 
@@ -381,14 +387,32 @@ void join(struct connected_users* users_list, char* name, int id)
 
     int i=0;
     int id_chan = find_channel_id(users_list, name);
+    char buffer[SIZE_BUFFER];
 
-    users_list->users[id].channel = id_chan;
-    users_list->channels[id_chan].nb_users++;
+    if(id_chan != -1) 
+    {
+        users_list->users[id].channel = id_chan;
+        users_list->channels[id_chan].nb_users++;
 
-    //send_msg(users_list->users[id].sock, users_list->users[id].username, "Welcome\r\n", "");
-    send_multicast(users_list, "HE LOGGED IIIIIIN", name, "[Server]");
+        //send_msg(users_list->users[id].sock, users_list->users[id].username, "Welcome\r\n", "");
+        sprintf(buffer, "%s has joined %s", name, users_list->users[id].username);
+        send_multicast(users_list, buffer, name, "[Server]");
+    }
+    else
+        send_msg(users_list->users[id].sock, users_list->users[id].username, "[Server] This channel does not exist\r\n", ANSI_COLOR_RED);
+        
 
     pthread_mutex_unlock( &(users_list->mutex) );
+}
+
+void quit_chan(struct connected_users* users_list, char* name, int id)
+{
+    int id_chan = find_channel_id(users_list, name);
+
+    users_list->users[id].channel = -1;
+    users_list->channels[].channel = -1;
+
+    
 }
 
 void send_msg(int sock, char* username, char* msg, char* color)
