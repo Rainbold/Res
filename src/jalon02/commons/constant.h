@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -27,13 +28,13 @@
 
 //#include "../server/server.h"
 //#include "../server/user.h"
-#include "regex_lib.h"
+//#include "regex_lib.h"
 #include "colors.h"
 #include "contrib.h"
 #include "network.h"
 
 // Max client
-#define CLIENTS_NB 3
+#define CLIENTS_NB 4
 
 // Size buffer server
 #define SIZE_BUFFER 512
@@ -49,6 +50,43 @@
 
 // Buffer for read and write binary file
 #define RW_BUFFER 1024
+
+#define REGEX_CMD_NB 12
+typedef enum {
+  // cmds sent to server
+  NICK, 		// 0
+  WHOIS,		// 1
+  WHO,		// 2
+  QUIT,		// 3
+  MSGALL,		// 4
+  MSG,		// 5
+  CREATE,		// 6
+  JOIN,		// 7
+  SEND,		// 8
+  FILERE,		// 9
+  
+  // cmds sent to client
+  CMSGALL,	// 10		/cmsgall username msg
+  CHAN,		// 11		/chan user msg
+  
+  // error in cmds
+  ERRNICK,	// 12
+  ERRWHOIS,	// 13
+  ERRMSGALL,	// 14
+  ERRMSG,		// 15
+  ERRCREATE,	// 16
+  ERRJOIN,	// 17
+  ERRSEND, 	// 18
+  ERRFILERE,	// 19
+  ERRCHAN,	// 20
+  
+  // Global error
+  ERROR,		// 21
+  
+  // other
+  MSGCHANNEL, // 22
+  QUITCHANNEL// 23
+} cmd_t;
 
 struct user_t {
     int sock;
@@ -67,11 +105,12 @@ struct user_t {
 struct channel_t {
     int id;
     char name[USERNAME_LEN];
+    pthread_mutex_t mutex;
     int nb_users;
 };
 
 struct connected_users {
-	int sock_serv;
+    int sock_serv;
     int current_user;
     pthread_mutex_t mutex; // mutex de protection de users[]
     struct user_t users[CLIENTS_NB];

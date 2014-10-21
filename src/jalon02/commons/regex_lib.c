@@ -5,7 +5,7 @@
  *      Author: root
  */
 
-#include "constant.h"
+#include "regex_lib.h"
 
 regex_t regex_cmds[REGEX_CMD_NB];
 regex_t regex_match_cmd;

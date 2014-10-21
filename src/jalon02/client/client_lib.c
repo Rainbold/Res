@@ -1,7 +1,6 @@
 #include "client.h"
 #include <netdb.h>
 #include <errno.h>
-#include "../commons/constant.h"
 
 
 /* get_addr_info fills the sockaddr_in structure with information such as the server's ip address, the server's port, etc... */
