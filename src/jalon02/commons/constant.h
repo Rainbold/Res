@@ -47,6 +47,9 @@
 // Read buffer length in clients
 #define READ_BUFFER 1024
 
+// Buffer for read and write binary file
+#define RW_BUFFER 1024
+
 struct user_t {
     int sock;
     char username[USERNAME_LEN];
