@@ -5,17 +5,19 @@
  *      Author: root
  */
 
-#include "constant.h"
+#include "regex_lib.h"
 
 regex_t regex_cmds[REGEX_CMD_NB];
 regex_t regex_match_cmd;
+regex_t regex_file_cmd;
+regex_t regex_filename;
 
 void regex_init()
 {
-	int err[REGEX_CMD_NB + 1], i;
-	char buf[128];
+	int err[REGEX_CMD_NB + 3], i;
+	char buf[256];
 
-	memset(buf, 0, 128);
+	memset(buf, 0, 256);
 
 	err[NICK]		= regcomp (&regex_cmds[NICK],	"^/nick",	REG_NOSUB);
 	err[WHOIS]		= regcomp (&regex_cmds[WHOIS],	"^/whois",	REG_NOSUB);
@@ -25,21 +27,27 @@ void regex_init()
 	err[MSG]		= regcomp (&regex_cmds[MSG],	"^/msg",	REG_NOSUB);
 	err[CREATE]		= regcomp (&regex_cmds[CREATE],	"^/create",	REG_NOSUB);
 	err[JOIN]		= regcomp (&regex_cmds[JOIN],	"^/join",	REG_NOSUB);
-	err[FILEREQ]	= regcomp (&regex_cmds[FILEREQ],"^/filereq",REG_NOSUB);
-	err[FILERES]	= regcomp (&regex_cmds[FILERES],"^/fileres",REG_NOSUB);
+	err[SEND]		= regcomp (&regex_cmds[SEND],	"^/send",	REG_NOSUB);
+	err[FILERE]		= regcomp (&regex_cmds[FILERE],	"^/filere",	REG_NOSUB);
 
-	sprintf(buf, "(^/[a-z]{1,6}) ([a-zA-Z0-9]{1,%d}) ?(.{0,%d})", USERNAME_LEN, SIZE_BUFFER);
+	err[CMSGALL]	= regcomp (&regex_cmds[CMSGALL],"^/cmsgall",REG_NOSUB);
+	err[CHAN]		= regcomp (&regex_cmds[CHAN],	"^/chan",	REG_NOSUB);
+
+	sprintf(buf, "(^/[a-z]{1,7}) ([a-zA-Z0-9]{1,%d}) ?(.{0,%d})", USERNAME_LEN, MSG_BUFFER);
 	err[REGEX_CMD_NB]	= regcomp (&regex_match_cmd, buf, REG_EXTENDED);
+	sprintf(buf, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}) ([0-9]{1,5}) ?(.{0,%d})", MSG_BUFFER);
+	err[REGEX_CMD_NB+1]	= regcomp (&regex_file_cmd, buf, REG_EXTENDED);
+	err[REGEX_CMD_NB+2] = regcomp (&regex_filename, "/?([a-z0-9A-Z.]+)$", REG_EXTENDED);
 
-	memset(buf, 0, 128);
+	memset(buf, 0, 256);
 
-	for(i = 0; i < REGEX_CMD_NB; i++)
+	for(i = 0; i < REGEX_CMD_NB+2; i++)
 	{
 		if(err[i] != 0)
 		{
-			regerror(err[i], &regex_cmds[i], buf, 128);
+			regerror(err[i], &regex_cmds[i], buf, 256);
 			printf("Error in regex.c : regcomp %d : %s\n", i, buf);
-			memset(buf, 0, 100);
+			memset(buf, 0, 256);
 		}
 	}
 }
@@ -77,11 +85,14 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 	{
 	case MSGALL:
 		memcpy(message, buf + 8, strlen(buf) - 8);
-		if(strlen(message) <= 1) return ERRMSGALL;
+		if(strlen(message) <= 1)
+			return ERRMSGALL;
 		/* no break */
 	case WHO:
 	case MSGCHANNEL:
 		return cmd;
+	default:
+		break;
 	}
 
 	match = regexec(&regex_match_cmd, buf, 4, pmatch, 0);
@@ -94,8 +105,6 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 			cmd = QUITCHANNEL;
 	}
 
-	// TODO GESTION ERREUR SI MATCH!=0
-
 	if(match != 0)
 	{
 		switch(cmd)
@@ -106,14 +115,18 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 			return ERRWHOIS;
 		case MSG:
 			return ERRMSG;
+		case CMSGALL:
+			return ERRMSGALL;
 		case CREATE:
 			return ERRCREATE;
 		case JOIN:
 			return ERRJOIN;
-		case FILEREQ:
-			return ERRFILEREQ;
-		case FILERES:
-			return ERRFILERES;
+		case SEND:
+			return ERRSEND;
+		case FILERE:
+			return ERRFILERE;
+		case CHAN:
+			return ERRCHAN;
 		default:
 			return ERROR;
 		}
@@ -134,10 +147,56 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 	return cmd;
 }
 
+void regex_get_filename(char* buf, char filename[])
+{
+	regmatch_t pmatch[2];
+	int l, len, match;
+	memset(filename, 0, MSG_BUFFER);
+
+	match = regexec(&regex_filename, buf, 2, pmatch, 0);
+
+	if(match == 0)
+	{
+		len = pmatch[1].rm_eo - pmatch[1].rm_so;
+		memcpy(filename, buf + pmatch[1].rm_so, len);
+		filename[len] = 0;
+	}
+}
+
+void regex_get_filere(char* buf, char ip[], char port[], char filepath[])
+{
+	regmatch_t pmatch[4];
+	int len, match;
+	memset(ip, 0, 16);
+	memset(port, 0, 6);
+	memset(filepath, 0, MSG_BUFFER);
+
+	match = regexec(&regex_file_cmd, buf, 4, pmatch, 0);
+
+	if(match == 0)
+	{
+		len = pmatch[1].rm_eo - pmatch[1].rm_so;
+		memcpy(ip, buf + pmatch[1].rm_so, len);
+		ip[len] = 0;
+
+		len = pmatch[2].rm_eo - pmatch[2].rm_so;
+		memcpy(port, buf + pmatch[2].rm_so, len);
+		port[len] = 0;
+
+		len = pmatch[3].rm_eo - pmatch[3].rm_so;
+		memcpy(filepath, buf + pmatch[3].rm_so, len);
+		filepath[len] = 0;
+		if(len >= 1) filepath[len-1] = 0;
+	}
+}
+
 void regex_free()
 {
 	int i;
 
 	for(i = 0; i <= REGEX_CMD_NB; i++)
 		regfree (&regex_cmds[i]);
+	regfree (&regex_match_cmd);
+	regfree (&regex_file_cmd);
+	regfree (&regex_filename);
 }

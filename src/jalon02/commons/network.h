@@ -47,13 +47,13 @@ void do_connect(int sockfd, const struct sockaddr_in *addr, socklen_t addrlen);
  * read a chuck of max SIZE_BUFFER chars and return the count of char actually read
  * @returns the number of char actually read
  */
-int do_read(const int socket, char buffer[SIZE_BUFFER], int size);
+int do_read(const int socket, char buffer[], int size);
 
 /**
  * write a string to this socket
  * @returns the number of char actually written
  */
-int do_write(const int client_socket_fd, const char buffer[SIZE_BUFFER]);
+int do_write(const int client_socket_fd, const char buffer[]);
 
 
 

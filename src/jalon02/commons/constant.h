@@ -26,6 +26,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+//#include "../server/server.h"
+//#include "../server/user.h"
+//#include "regex_lib.h"
+#include "colors.h"
+#include "contrib.h"
+#include "network.h"
+
 // Max client
 #define CLIENTS_NB 4
 
@@ -35,40 +42,50 @@
 // Size msg buffer
 #define MSG_BUFFER 256
 
-// Username length
+// Username length same as channel length
 #define USERNAME_LEN 32
 
+// Read buffer length in clients
+#define READ_BUFFER 1024
 
-typedef enum
-{
-    // cmds
-    NICK,       // 0
-    WHOIS,      // 1
-    WHO,        // 2
-    QUIT,       // 3
-    MSGALL,     // 4
-    MSG,        // 5
-    CREATE,     // 6
-    JOIN,       // 7
-    FILEREQ,    // 8
-    FILERES,    // 9
+// Buffer for read and write binary file
+#define RW_BUFFER 1024
 
-    // error in cmds
-    ERRNICK,    // 10
-    ERRWHOIS,   // 11
-    ERRMSGALL,  // 12
-    ERRMSG,     // 13
-    ERRCREATE,  // 14
-    ERRJOIN,    // 15
-    ERRFILEREQ, // 16
-    ERRFILERES, // 17
-
-    // Global error
-    ERROR,      // 18
-
-    // other
-    MSGCHANNEL, // 19
-    QUITCHANNEL,// 20
+#define REGEX_CMD_NB 12
+typedef enum {
+  // cmds sent to server
+  NICK, 		// 0
+  WHOIS,		// 1
+  WHO,		// 2
+  QUIT,		// 3
+  MSGALL,		// 4
+  MSG,		// 5
+  CREATE,		// 6
+  JOIN,		// 7
+  SEND,		// 8
+  FILERE,		// 9
+  
+  // cmds sent to client
+  CMSGALL,	// 10		/cmsgall username msg
+  CHAN,		// 11		/chan user msg
+  
+  // error in cmds
+  ERRNICK,	// 12
+  ERRWHOIS,	// 13
+  ERRMSGALL,	// 14
+  ERRMSG,		// 15
+  ERRCREATE,	// 16
+  ERRJOIN,	// 17
+  ERRSEND, 	// 18
+  ERRFILERE,	// 19
+  ERRCHAN,	// 20
+  
+  // Global error
+  ERROR,		// 21
+  
+  // other
+  MSGCHANNEL, // 22
+  QUITCHANNEL// 23
 } cmd_t;
 
 struct user_t {
@@ -99,11 +116,5 @@ struct connected_users {
     struct user_t users[CLIENTS_NB];
     struct channel_t channels[CLIENTS_NB];
 };
-
-#include "../server/server.h"
-#include "../server/user.h"
-#include "regex_lib.h"
-#include "colors.h"
-#include "network.h"
 
 #endif /* CONSTANT_H_ */

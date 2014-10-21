@@ -171,6 +171,7 @@ void* client_handling(void* p_data)
         memset(name, 0, sizeof(char)*USERNAME_LEN);
         memset(msg, 0, sizeof(char)*MSG_BUFFER);
         do_read(user->sock, buffer, SIZE_BUFFER);
+	printf("raw: %s", buffer);
         cmd = regex_match(buffer, name, msg);
 
         switch(cmd)
