@@ -105,8 +105,12 @@ void create(struct connected_users* users_list, char* name, int id);
  */
 void join(struct connected_users* users_list, char* name, int id);
 
+/**
+ * Joins a channel called name
+ */
+void quit_chan(struct connected_users* users_list, char* name, int id);
 
-void send_msg(int sock, char* username, char* msg, char* color);
+void send_msg(int sock, char* msg, char* color);
 
 // void command(cmd_t cmd, char* buffer, char* argv, ...);
 

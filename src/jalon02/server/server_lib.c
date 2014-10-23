@@ -33,9 +33,7 @@ void send_broadcast_by_user_name(const struct connected_users* users_list, const
     {
         // sends a message to all the connected users except to the one who sent it
         if(users_list->users[i].sock != -1 && strcmp(users_list->users[i].username, uname_src) )
-            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, str, "");
-        else if( !strcmp(users_list->users[i].username, uname_src) )
-            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, "", "");
+            send_msg(users_list->users[i].sock, str, "");
     }
 }
 
@@ -53,9 +51,7 @@ void send_unicast(const struct connected_users* users_list, const char buffer[MS
     {
         // sends a message to all the connected users except to the one who sent it
         if( !strcmp(users_list->users[i].username, uname_dest) )
-            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, str, "");
-        else if( !strcmp(users_list->users[i].username, uname_src) )
-            send_msg(users_list->users[i].sock, (char*)users_list->users[i].username, "", "");
+            send_msg(users_list->users[i].sock, str, "");
     }
 }
 
@@ -74,9 +70,7 @@ void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER]
     {
         // sends a message to all the connected users except to the one who sent it
         if( users_list->users[i].channel == id_chan && strcmp(users_list->users[i].username, uname_src) && users_list->users[i].sock != -1)
-            send_msg(users_list->users[i].sock, "", str, "");
-        else if( !strcmp(users_list->users[i].username, uname_src) )
-            send_msg(users_list->users[i].sock, users_list->users[i].username, "", "");
+            send_msg(users_list->users[i].sock, str, "");
     }
 }
 
@@ -103,7 +97,7 @@ void init_users(int sock, struct connected_users* users_list) {
 
         users_list->channels[i].id = -1;
         strcpy(users_list->channels[i].name, "");
-        users_list->channels[i].nb_users = -1;
+        users_list->channels[i].nb_users = 0;
     }
 }
 
@@ -147,7 +141,7 @@ void* client_handling(void* p_data)
     user->t = time(NULL);
     user->tm = *localtime( &(user->t) );
 
-    send_msg(user->sock, "new_client", "[Server] Please logon with /nick <your pseudo>\r\n", ANSI_COLOR_YELLOW);
+    send_msg(user->sock, "[Server] Please logon with /nick <your pseudo>\r\n", ANSI_COLOR_YELLOW);
     
     // Asks for a new username as long as the command entered is invalid
     do {
@@ -157,13 +151,13 @@ void* client_handling(void* p_data)
         if(cmd == NICK)
             cont = 0;
         else
-            send_msg(user->sock, "new_client", "[Server] You have to login using the command /nick <your pseudo>\r\n", ANSI_COLOR_RED);
+            send_msg(user->sock, "[Server] You have to login using the command /nick <your pseudo>\r\n", ANSI_COLOR_RED);
     } while(cont);
 
     nick(users_list, name, id);
 
     sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
-    send_msg(user->sock, name, buffer, ANSI_COLOR_YELLOW);
+    send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
 
     cont = 1;
     while(cont)
@@ -193,18 +187,18 @@ void* client_handling(void* p_data)
                 case WHO:
                     who(users_list, id);
                     break;
-                case QUIT:
-                    quit(users_list, id);
-                    break;
                 case CREATE:
                     create(users_list, name, id);
                     break;
                 case JOIN:
                     join(users_list, name, id);
                     break;
+                case QUITCHANNEL:
+                    quit_chan(users_list, name, id);
+                    break;
                 default:
                     if(user->channel == -1)
-                        send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
+                        send_msg(user->sock, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
                     else
                         send_multicast(users_list, buffer, users_list->channels[user->channel].name, user->username);
                     break;
@@ -212,8 +206,8 @@ void* client_handling(void* p_data)
         }
         else
         {
+            quit(users_list, id);
             cont = 0;
-            printf("test\n");
         }
     }
 
@@ -271,7 +265,7 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
                 else
                     strcpy(name, users_list->users[id].username);
 
-                send_msg(users_list->users[id].sock, name, "[Server] This username is already taken. Please use /nick <your pseudo>\r\n", ANSI_COLOR_RED);
+                send_msg(users_list->users[id].sock, "[Server] This username is already taken. Please use /nick <your pseudo>\r\n", ANSI_COLOR_RED);
                 memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
                 memset(name, 0, sizeof(char)*USERNAME_LEN);
                 
@@ -290,7 +284,7 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
                 memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
                 pthread_mutex_lock( &(users_list->mutex) );
                 sprintf(buffer, "/nick %s %s", name, inet_ntoa(users_list->users[id].info.sin_addr));
-                send_msg(users_list->users[id].sock, name, buffer, "");
+                send_msg(users_list->users[id].sock, buffer, "");
                 strcpy(users_list->users[id].username, name);
                 pthread_mutex_unlock( &(users_list->mutex) );
                 cont = 0;
@@ -300,11 +294,8 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
         memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
         sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
 
-        send_msg(users_list->users[id].sock, users_list->users[id].username, "", ANSI_COLOR_YELLOW);
-        send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+        send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
     }
-    else
-        send_msg(users_list->users[id].sock, users_list->users[id].username, "", ANSI_COLOR_YELLOW);
 }
 
 void whois(struct connected_users* users_list, char* name, int id)
@@ -328,7 +319,7 @@ void whois(struct connected_users* users_list, char* name, int id)
         sprintf(buffer, "[Server] Unknown user : %s\r\n", name);
     }
     
-    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+    send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
     pthread_mutex_unlock( &(users_list->mutex) );
 }
 
@@ -348,15 +339,19 @@ void who(struct connected_users* users_list, int id)
         }
     }
 
-    send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, ANSI_COLOR_YELLOW);
+    send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
     pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 void quit(struct connected_users* users_list, int id)
 {
     pthread_mutex_lock( &(users_list->mutex) );
-    send_msg(users_list->users[id].sock, users_list->users[id].username, "Goodbye.\r\n", ANSI_COLOR_YELLOW);
+    
+    if(users_list->users[id].channel != -1)
+        quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+    
     close(users_list->users[id].sock);
+
     users_list->users[id].sock = -1;
     memset( &(users_list->users[id].username), '\0', sizeof(char)*USERNAME_LEN);
     pthread_mutex_unlock( &(users_list->mutex) );
@@ -387,10 +382,10 @@ void create(struct connected_users* users_list, char* name, int id)
         pthread_mutex_lock( &(users_list->mutex) );
 
         strcat(buffer, name);
-        send_msg(users_list->users[id].sock, users_list->users[id].username, buffer, "");
+        send_msg(users_list->users[id].sock, buffer, "");
     }
     else
-        send_msg(users_list->users[id].sock, users_list->users[id].username, "[Server] This channel name already exists\r\n", ANSI_COLOR_RED);
+        send_msg(users_list->users[id].sock, "[Server] This channel name already exists\r\n", ANSI_COLOR_RED);
 
     pthread_mutex_unlock( &(users_list->mutex) );
 }
@@ -405,6 +400,13 @@ void join(struct connected_users* users_list, char* name, int id)
 
     if(id_chan != -1) 
     {
+        if(users_list->users[id].channel != -1 && users_list->users[id].channel != id_chan)
+        {
+            pthread_mutex_unlock( &(users_list->mutex) );
+            quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+            pthread_mutex_lock( &(users_list->mutex) );
+        }
+
         users_list->users[id].channel = id_chan;
         users_list->channels[id_chan].nb_users++;
 
@@ -413,45 +415,48 @@ void join(struct connected_users* users_list, char* name, int id)
         send_multicast(users_list, buffer, name, "[Server]");
     }
     else
-        send_msg(users_list->users[id].sock, users_list->users[id].username, "[Server] This channel does not exist\r\n", ANSI_COLOR_RED);
+        send_msg(users_list->users[id].sock, "[Server] This channel does not exist\r\n", ANSI_COLOR_RED);
         
-
     pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 void quit_chan(struct connected_users* users_list, char* name, int id)
 {
+    pthread_mutex_lock( &(users_list->mutex) );
+
     int id_chan = find_channel_id(users_list, name);
+    char buffer[SIZE_BUFFER];
 
-    users_list->users[id].channel = -1;
-    users_list->channels[id_chan].id = -1;
+    if(id_chan != -1) 
+    {
+        if(users_list->users[id].channel != -1)
+        {
+            users_list->users[id].channel = -1;
+            users_list->channels[id_chan].nb_users--;
 
-    
+            sprintf(buffer, "%s has disconnected from the channel", users_list->users[id].username);
+            send_multicast(users_list, buffer, name, "[Server]");
+
+            if(users_list->channels[id_chan].nb_users <= 0)
+            {
+                users_list->channels[id_chan].id = -1;
+                strcpy(users_list->channels[id_chan].name, "");
+                users_list->channels[id_chan].nb_users = -1;
+            }
+        }
+    }
+    else
+        send_msg(users_list->users[id].sock, "[Server] This channel does not exist\r\n", ANSI_COLOR_RED);
+
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
-void send_msg(int sock, char* username, char* msg, char* color)
+void send_msg(int sock, char* msg, char* color)
 {
     char buffer[SIZE_BUFFER+10];
     strcpy(buffer, color);
     strcat(buffer, msg);
     strcat(buffer, ANSI_COLOR_RESET);
-    strcat(buffer, username);
-    strcat(buffer, "> ");
+
     do_write(sock, buffer);
 }
-
-// void command(cmd_t cmd, char* buffer, char* argv, ...)
-// {
-//     va_list ap;
-//     char* arg;
-
-//     va_start(ap, argv);
-
-//     do {
-//         printf("%s\n", arg);
-//         if( strcpy(arg, va_arg(ap, char*)) == NULL )
-//             break;
-//     } while(arg != NULL);
-
-//     va_end(ap);
-// }
