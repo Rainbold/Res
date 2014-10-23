@@ -151,7 +151,8 @@ void* client_handling(void* p_data)
     
     // Asks for a new username as long as the command entered is invalid
     do {
-        do_read(user->sock, buffer, SIZE_BUFFER);
+        if( do_read(user->sock, buffer, SIZE_BUFFER) == 0 )
+            pthread_cancel( user->thread );
         cmd = regex_match(buffer, name, msg);
         if(cmd == NICK)
             cont = 0;
@@ -170,42 +171,49 @@ void* client_handling(void* p_data)
         memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
         memset(name, 0, sizeof(char)*USERNAME_LEN);
         memset(msg, 0, sizeof(char)*MSG_BUFFER);
-        do_read(user->sock, buffer, SIZE_BUFFER);
-	printf("raw: %s", buffer);
-        cmd = regex_match(buffer, name, msg);
-
-        switch(cmd)
+        if(do_read(user->sock, buffer, SIZE_BUFFER) != 0)
         {
-            case NICK:
-                nick(users_list, name, id);
-                break;
-            case MSGALL:
-                send_broadcast_by_user_name(users_list, msg, user->username);
-                break;
-            case MSG:
-                send_unicast(users_list, msg, name, user->username);
-                break;
-            case WHOIS:
-                whois(users_list, name, id);
-                break;
-            case WHO:
-                who(users_list, id);
-                break;
-            case QUIT:
-                quit(users_list, id);
-                break;
-            case CREATE:
-                create(users_list, name, id);
-                break;
-            case JOIN:
-                join(users_list, name, id);
-                break;
-            default:
-                if(user->channel == -1)
-                    send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
-                else
-                    send_multicast(users_list, buffer, users_list->channels[user->channel].name, user->username);
-                break;
+            printf("raw: %s", buffer);
+            cmd = regex_match(buffer, name, msg);
+
+            switch(cmd)
+            {
+                case NICK:
+                    nick(users_list, name, id);
+                    break;
+                case MSGALL:
+                    send_broadcast_by_user_name(users_list, msg, user->username);
+                    break;
+                case MSG:
+                    send_unicast(users_list, msg, name, user->username);
+                    break;
+                case WHOIS:
+                    whois(users_list, name, id);
+                    break;
+                case WHO:
+                    who(users_list, id);
+                    break;
+                case QUIT:
+                    quit(users_list, id);
+                    break;
+                case CREATE:
+                    create(users_list, name, id);
+                    break;
+                case JOIN:
+                    join(users_list, name, id);
+                    break;
+                default:
+                    if(user->channel == -1)
+                        send_msg(user->sock, user->username, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
+                    else
+                        send_multicast(users_list, buffer, users_list->channels[user->channel].name, user->username);
+                    break;
+            }
+        }
+        else
+        {
+            cont = 0;
+            printf("test\n");
         }
     }
 
@@ -266,7 +274,12 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
                 send_msg(users_list->users[id].sock, name, "[Server] This username is already taken. Please use /nick <your pseudo>\r\n", ANSI_COLOR_RED);
                 memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
                 memset(name, 0, sizeof(char)*USERNAME_LEN);
-                do_read(users_list->users[id].sock, buffer, SIZE_BUFFER);
+                
+                if( do_read(users_list->users[id].sock, buffer, SIZE_BUFFER) == 0 )
+                {
+                    printf("tes\n");
+                    break;
+                }
                 cmd = regex_match(buffer, name, msg);
                 if(cmd != NICK)
                     continue;
@@ -411,7 +424,7 @@ void quit_chan(struct connected_users* users_list, char* name, int id)
     int id_chan = find_channel_id(users_list, name);
 
     users_list->users[id].channel = -1;
-    users_list->channels[].channel = -1;
+    users_list->channels[id_chan].id = -1;
 
     
 }
