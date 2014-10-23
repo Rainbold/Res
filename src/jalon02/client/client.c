@@ -39,12 +39,11 @@ int main(int argc,char** argv)
 	printf("> ");
 	fflush(stdout);
 
-	while( strncmp("/quit", outbuf, 5) != 0 )
-	{
+	while( strcmp("/quit\n", outbuf) != 0)
 		handle_client_message(&info, outbuf);
-	}
 
 	close(sock);
-	//regex_free();
+	regex_free();
+	//freeaddrinfo((struct addrinfo*) &serv_info);
     return 0;
 }
