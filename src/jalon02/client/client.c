@@ -13,8 +13,9 @@ int main(int argc,char** argv)
 	struct sockaddr_in serv_info;
 	pthread_t thread;
 	struct info info;
-
 	char outbuf[SIZE_BUFFER];
+
+	regex_init();
 
     if (argc != 3)
     {
@@ -44,6 +45,6 @@ int main(int argc,char** argv)
 	}
 
 	close(sock);
-
+	//regex_free();
     return 0;
 }

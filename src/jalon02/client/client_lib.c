@@ -97,8 +97,6 @@ void* handle_server_message(void* info)
 
 	memset(ip,				0, 16);
 
-	regex_init();
-
 	while(1)
 	{
 		len = do_read(pinfo->sock, inbuf, READ_BUFFER);
@@ -116,7 +114,7 @@ void* handle_server_message(void* info)
 			memset(ip, 0, 16);
 			memcpy(pinfo->username, userorchannel, strlen(userorchannel));
 			memcpy(ip, message, strlen(message)-1);
-			printf("\n");
+			printf("Change of username\n");
 			break;
 		case QUITCHANNEL:
 			memset(pinfo->channel, 0, USERNAME_LEN);
@@ -184,7 +182,7 @@ void* handle_server_message(void* info)
 			break;
 
 		default:
-			printf("\ncase default\n");
+			printf("\nUnknown commend: %s\n", inbuf);
 			break;
 		}
 
