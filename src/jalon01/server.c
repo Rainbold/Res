@@ -194,7 +194,7 @@ static void* server_listening(void* p_data)
 
         if(client_latest_id < CLIENTS_NB)
         {
-            serv->clients_sock[client_latest_id] = do_accept(serv->sock, &(serv->clients_info[client_latest_id]), &(serv->client_info_len[client_latest_id]) );
+            do_accept(serv->sock, &(serv->clients_info[client_latest_id]), &(serv->client_info_len[client_latest_id]) );
             client_latest_id++;
             printf("New client : %d\n", client_latest_id);
         }
