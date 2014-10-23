@@ -62,7 +62,8 @@ int do_read(const int socket, char buffer[], int size)
 
 	// deletion of the /r/n at the end of the received string
 	//strncpy(buffer, buffer_aux, strlen(buffer_aux)-2);
-	buffer[n] = 0;
+	if(n > 0)
+		buffer[n] = 0;
 
 	return n;
 }
