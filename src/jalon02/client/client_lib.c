@@ -182,7 +182,7 @@ void* handle_server_message(void* info)
 			break;
 
 		default:
-			printf("\nUnknown commend: %s\n", inbuf);
+			printf("\nUnknown command: %s\n", inbuf);
 			break;
 		}
 
