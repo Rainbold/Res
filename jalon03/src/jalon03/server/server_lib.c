@@ -239,7 +239,7 @@ void whois(struct connected_users* users_list, char* name, int id)
     struct tm tm;
     struct sockaddr_in info;
 
-    if(id_target >= 0)
+    if(id_target >= 0 && users_list->users[id_target].sock > -1)
     {
         tm = users_list->users[id_target].tm;
         info = users_list->users[id_target].info;

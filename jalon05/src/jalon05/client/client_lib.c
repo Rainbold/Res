@@ -42,41 +42,32 @@ int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port)
    and sends the message contained into the buffer buf to the server */
 void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 {
+	struct pollfd fds;
+    int ret;
+
 	memset(outbuf, 0, SIZE_BUFFER);
+    
+    fds.fd = 0;
+    fds.events = POLLIN;
 
-	fgets(outbuf, SIZE_BUFFER, stdin);
+    /* Checks if there is data waiting in stdin */
+    ret = poll(&fds, 1, 1);
+    
+    /* if there is, fgets is executed */
+    if(ret == 1)
+    {
+		fgets(outbuf, SIZE_BUFFER, stdin);
 
-	if(pinfo->req == 1)
-	{
-		write(pinfo->fd[1], outbuf, strlen(outbuf));
-		pinfo->req = 0;
-	}
-	else if( strcmp("/quit\n", outbuf) )
-	{
-		if(strlen(outbuf) > 1)
-			do_write(pinfo->sock, outbuf);
-
-		/* If the user is connected to a channel */
-		if(strlen(pinfo->channel))
+		if(pinfo->req == 1)
 		{
-			printf("%s@", pinfo->username);
-			colour(COLOR_CHANNEL);
-			printf("%s", pinfo->channel);
-			colour(0);
-			printf("> ");
-		}
-		/* If the user is connected */
-		else if(strlen(pinfo->username) != 0)
-		{
-			colour(0);
-			printf("%s> ", pinfo->username);
+			write(pinfo->fd[1], outbuf, strlen(outbuf));
+			pinfo->req = 0;
 		}
 		else
 		{
-			colour(0);
-			printf("> ");
+			if(strlen(outbuf) > 1)
+				do_write(pinfo->sock, outbuf);
 		}
-		fflush(stdout);
 	}
 }
 
@@ -162,10 +153,6 @@ void* handle_server_message(void* info)
 					pthread_create(&p2p, NULL, handle_file_receive, pinfo);
 					memset(buf, 0, 50);
 					sprintf(buf, "/filere %s %s %d %s\n", userorchannel, ip, ++(pinfo->port), message);
-					printf("user : %s\n", userorchannel);
-					printf("ip : %s\n", ip);
-					printf("port : %d\n", pinfo->port);
-					printf("message : %s\n", message);
 					do_write(pinfo->sock, buf);
 				}
 				else
@@ -182,8 +169,6 @@ void* handle_server_message(void* info)
 					printf("Sending file to %s\n", userorchannel);
 					memset(pinfo->inbuf, 0, READ_BUFFER);
 					strcpy(pinfo->inbuf, message);
-					printf("pinfo %s\n", pinfo->inbuf);
-					printf("message %s\n", message);
 					pthread_create(&p2p, NULL, handle_send_file, pinfo);
 				}
 				else
@@ -197,6 +182,9 @@ void* handle_server_message(void* info)
 
 		if(strlen(pinfo->channel) != 0)
 		{
+			if(cmd == JOIN)
+				printf("\n");
+
 			printf("%s@", pinfo->username);
 			colour(COLOR_CHANNEL);
 			printf("%s", pinfo->channel);
@@ -221,10 +209,10 @@ void* handle_server_message(void* info)
 	regex_free();
 	close(pinfo->sock);
 
-	/* When the thread terminates, a signal is sent to the main processus
-	   to terminate it too. That's because the latter is likely to be waiting for
-	   a user input. */
-	kill(getpid(), 15);
+	/* The running variable is set to 0 in order to terminate the loop used in the main thread */	
+    pthread_mutex_lock( &(pinfo->mutex) );
+	pinfo->running = 0;
+    pthread_mutex_unlock( &(pinfo->mutex) );
 
 	return NULL;
 }

@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
 #include <pthread.h>
+#include <poll.h>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>

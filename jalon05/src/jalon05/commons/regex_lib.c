@@ -173,12 +173,6 @@ void regex_get_filere(char* buf, char ip[], char port[], char filepath[])
 
 	match = regexec(&regex_file_cmd, buf, 4, pmatch, 0);
 
-	printf("REGEX %s\n", buf);
-	printf("REGEX %d\n", REG_BADBR);
-	printf("REGEX %d\n", REG_BADPAT);
-	printf("REGEX %d\n", REG_BADRPT);
-	printf("REGEX %d\n", match);
-
 	if(match == 0)
 	{
 		len = pmatch[1].rm_eo - pmatch[1].rm_so;
@@ -193,7 +187,6 @@ void regex_get_filere(char* buf, char ip[], char port[], char filepath[])
 		memcpy(filepath, buf + pmatch[3].rm_so, len);
 		filepath[len] = 0;
 		if(len >= 1) filepath[len-1] = 0;
-		printf("REGEX2 %s %s %s\n", ip, port, filepath);
 	}
 }
 

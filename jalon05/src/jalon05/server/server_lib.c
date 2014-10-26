@@ -13,16 +13,15 @@ void send_broadcast_by_user_name(const struct connected_users* users_list, const
     char str[SIZE_BUFFER] = "";
 
     /* /cmsgall username_source msg */
-    strcpy(str, "/cmsgall ");
-    strcat(str, uname_src);
-    strcat(str, " ");
-    strcat(str, buffer);
+    sprintf(str, "/cmsgall %s %s", uname_src, buffer);
 
     for(i=0; i<CLIENTS_NB; i++)
     {
         /* sends a message to all the connected users except to the one who sent it */
-        if(users_list->users[i].sock != -1 && strcmp(users_list->users[i].username, uname_src) )
+        if(users_list->users[i].sock > -1 && strcmp(users_list->users[i].username, uname_src) )
             send_msg(users_list->users[i].sock, str, "");
+        if(users_list->users[i].sock > -1 && !strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, "", "");
     }
 }
 
@@ -33,16 +32,18 @@ void send_unicast(const struct connected_users* users_list, const char buffer[MS
     char str[SIZE_BUFFER] = "";
 
     /* /msg username_source msg */
-    strcpy(str, "/msg ");
-    strcat(str, uname_src);
-    strcat(str, " ");
-    strcat(str, buffer);
+    sprintf(str, "/msg %s %s", uname_src, buffer);
 
-    for(i=0; i<CLIENTS_NB; i++)
-    {
-        if( !strcmp(users_list->users[i].username, uname_dest) )
-            send_msg(users_list->users[i].sock, str, "");
-    }
+    if( strcmp(uname_src, uname_dest) )
+        for(i=0; i<CLIENTS_NB; i++)
+        {
+            if( !strcmp(users_list->users[i].username, uname_dest) )
+                send_msg(users_list->users[i].sock, str, "");
+            if( !strcmp(users_list->users[i].username, uname_src) )
+                send_msg(users_list->users[i].sock, "", "");
+        }
+    else
+        send_msg(users_list->users[find_username_id((struct connected_users*)users_list, (char*)uname_src)].sock, "", "");
 }
 
 /* send_multicast sends a message to all the users connected to the channel cname */
@@ -53,16 +54,15 @@ void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER]
     int id_chan = find_channel_id(users_list, cname);
 
     /* /chan username_source msg */
-    strcpy(str, "/chan ");
-    strcat(str, uname_src);
-    strcat(str, " ");
-    strcat(str, buffer);
+    sprintf(str, "/chan %s %s", uname_src, buffer);
 
     for(i=0; i<CLIENTS_NB; i++)
     {
         /* sends a message to all the connected users except to the one who sent it */
-        if( users_list->users[i].channel == id_chan && strcmp(users_list->users[i].username, uname_src) && users_list->users[i].sock != -1)
+        if( users_list->users[i].channel == id_chan && strcmp(users_list->users[i].username, uname_src) && users_list->users[i].sock > -1)
             send_msg(users_list->users[i].sock, str, "");
+        if( users_list->users[i].sock > -1 && !strcmp(users_list->users[i].username, uname_src) )
+            send_msg(users_list->users[i].sock, "", "");
     }
 }
 
@@ -100,33 +100,38 @@ void* server_accepting(void* p_data)
     struct connected_users* users_list = p_data;
     int i = 0;
 
-    struct user_t tmpUser;
-
     for (;;)
     {
         /* accepts connection from client */
         for(i=0; i<CLIENTS_NB; i++)
         {
             /* looks for an empty spot in the array to store the connection data */
-            if(users_list->users[i].sock == -1 && users_list->nb_users < CLIENTS_NB)
+            if(users_list->users[i].sock == -1)
             {
+                pthread_mutex_lock( &(users_list->mutex) );
                 users_list->nb_users++;
+                pthread_mutex_unlock( &(users_list->mutex) );
+                
                 do_accept(users_list->sock_serv, &(users_list->users[i].sock), &(users_list->users[i].info), users_list->users[i].info_len );
                 
-                /* The mutex on users_list is locked to prevent another connection to change the current_user variable.
-                   This mutex will be unlocked in the function client_handling. */
-                pthread_mutex_lock( &(users_list->mutex) );
-                users_list->current_user = i;
-                pthread_create(  &(users_list->users[i].thread), NULL, client_handling, users_list );
-            }
-
-            /* If the maximal number of connected users has been reached, a connection is open
-               to inform him that there are no spot available at the moment */
-            if(users_list->nb_users >= CLIENTS_NB)
-            {
-                do_accept(users_list->sock_serv, &(tmpUser.sock), NULL, 0);
-                do_write(tmpUser.sock, "[Server] There are too many users connected at the moment, please try again later.\r\n");
-                close(tmpUser.sock);
+                if(users_list->nb_users >= CLIENTS_NB)
+                {
+                    pthread_mutex_lock( &(users_list->mutex) );
+                    users_list->nb_users--;
+                    pthread_mutex_unlock( &(users_list->mutex) );
+            
+                    do_write(users_list->users[i].sock, "[Server] There are too many users connected at the moment, please try again later.\r\n");
+                    close(users_list->users[i].sock);
+                    users_list->users[i].sock = -1;
+                }
+                else
+                {
+                    /* The mutex on users_list is locked to prevent another connection to change the current_user variable.
+                       This mutex will be unlocked in the function client_handling. */
+                    pthread_mutex_lock( &(users_list->mutex) );
+                    users_list->current_user = i;
+                    pthread_create(  &(users_list->users[i].thread), NULL, client_handling, users_list );
+                }
             }
         }
     }
@@ -160,16 +165,20 @@ void* client_handling(void* p_data)
             quit(users_list, id);
 
         cmd = regex_match(buffer, name, msg);
-        /* If the command is a valid /nick then the users is considered as connected to the server
-           and can now issue commands */
+
         if(cmd == NICK)
-            cont = 0;
+        {
+            /* The new username will be stored into the users_list structure */
+            nick(users_list, name, id);
+            
+            /* If the command is a valid /nick then the users is considered as connected to the server
+               and can now issue commands */
+            if(strcmp(user->username, ""))
+                cont = 0;
+        }
         else
             send_msg(user->sock, "[Server] You have to login using the command /nick <your pseudo>\r\n", ANSI_COLOR_RED);
     } while(cont);
-
-    /* The new username is stored into the users_list structure */
-    nick(users_list, name, id);
 
     sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
     send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
@@ -185,7 +194,6 @@ void* client_handling(void* p_data)
         if(do_read(user->sock, buffer, SIZE_BUFFER) != 0)
         {
             cmd = regex_match(buffer, name, msg);
-            printf("%s\n", buffer);
 
             switch(cmd)
             {
@@ -220,6 +228,9 @@ void* client_handling(void* p_data)
                     break;
                 case QUITCHANNEL:
                     quit_chan(users_list, name, id);
+                    break;
+                case QUIT:
+                    quit(users_list, id);
                     break;
                 default:
                     /* If the user is not connected to the channel, if a the text entered is not a valid command,
@@ -267,11 +278,11 @@ int find_channel_id(struct connected_users* users_list, char* name)
     return -1;
 }
 
-/* nick */
+/* nick checks if a username is already in use and stores it in the users_list structure, if that is not the case,
+   while informing the user of the sucessful nam change */
 void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
 {
     int i=0;
-    int cont = 1;
     int verif = 1;
     char msg[MSG_BUFFER];
     char buffer[SIZE_BUFFER];
@@ -284,64 +295,42 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
     if( strcmp(name, users_list->users[id].username) )
     {
 
-        do {
-
-            /* checks if the username name is already in use */
-            for(i=0; i<CLIENTS_NB; i++)
-            {
-                if(!strcmp(name, users_list->users[i].username))
-                    verif = 0;
-            }
-
-            /* If it is already in use */
-            if(!verif)
-            {
-                send_msg(users_list->users[id].sock, "[Server] This username is already taken. Please use /nick <your pseudo>\r\n", ANSI_COLOR_RED);
-                memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-                memset(name, 0, sizeof(char)*USERNAME_LEN);
-                
-                
-                /* If the connection is lost, the user socket is closed and his thread terminated */
-                if( do_read(users_list->users[id].sock, buffer, SIZE_BUFFER) == 0 )
-                {
-                    quit(users_list, id);
-                    break;
-                }
-
-                /* A new /nick command is expected with a valid and not used username */
-                cmd = regex_match(buffer, name, msg);
-
-                /* If the command is not a /nick command the process restarts */
-                if(cmd != NICK)
-                    continue;
-
-                /* verif is reset to 1 to repeat the previous test */
-                verif = 1;
-            }
-            /* If it is not already in use the new username is stored into the users_list structure
-               A "/nick username ip" command, which tells the client the command was a success, is sent back to the user
-               It contains his username and IP address */
-            else 
-            {
-                memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-                pthread_mutex_lock( &(users_list->mutex) );
+        /* checks if the username name is already in use */
+        verif = (find_username_id(users_list, name) == -1) ? 1 : 0;
+        
+        /* If it is already in use */
+        if(!verif)
+        {
+            send_msg(users_list->users[id].sock, "[Server] This username is already taken.\r\n", ANSI_COLOR_RED);
             
-                sprintf(buffer, "/nick %s %s", name, inet_ntoa(users_list->users[id].info.sin_addr));
-                do_write(users_list->users[id].sock, buffer);
-            
-                strcpy(users_list->users[id].username, name);
-            
-                pthread_mutex_unlock( &(users_list->mutex) );
-                cont = 0;
-            }
-        } while(cont);
+            memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
+            memset(name, 0, sizeof(char)*USERNAME_LEN);
+        }
+        /* If it is not already in use the new username is stored into the users_list structure
+           A "/nick username ip" command, which tells the client the command was a success, is sent back to the user
+           It contains his username and IP address */
+        else 
+        {
+            memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
+            pthread_mutex_lock( &(users_list->mutex) );
+        
+            sprintf(buffer, "/nick %s %s", name, inet_ntoa(users_list->users[id].info.sin_addr));
+            do_write(users_list->users[id].sock, buffer);
+        
+            strcpy(users_list->users[id].username, name);
+        
+            /* The successful /nick command is notified to the user */
+            memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
+            sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
 
-        /* The successful /nick command is notified to the user */
-        memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-        sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
-
-        send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
+            send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
+            
+            pthread_mutex_unlock( &(users_list->mutex) );
+        }
     }
+    else
+        send_msg(users_list->users[id].sock, "", "");
+
 }
 
 /* whois sends to the requesting user information on a connected user such as his ip/port tuple and his connection date */
@@ -354,7 +343,7 @@ void whois(struct connected_users* users_list, char* name, int id)
     struct tm tm;
     struct sockaddr_in info;
 
-    if(id_target >= 0)
+    if(id_target >= 0 && users_list->users[id_target].sock > -1)
     {
         tm = users_list->users[id_target].tm;
         info = users_list->users[id_target].info;
@@ -379,7 +368,7 @@ void who(struct connected_users* users_list, int id)
     pthread_mutex_lock( &(users_list->mutex) );
     for(i=0; i<CLIENTS_NB; i++)
     {
-        if(users_list->users[i].sock != -1)
+        if(users_list->users[i].sock > -1)
         {
             strcat(buffer, "\t- ");
             strcat(buffer, users_list->users[i].username);
@@ -401,6 +390,8 @@ void quit(struct connected_users* users_list, int id)
     /* The user is disconnected from his channel if he was connected to one */ 
     if(users_list->users[id].channel != -1)
         quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+
+    do_write(users_list->users[id].sock, "[Server] You will now be terminated.\n");
     
     /* The user socket is closed */
     close(users_list->users[id].sock);
@@ -463,25 +454,30 @@ void join(struct connected_users* users_list, char* name, int id)
     /* If the channel actually exists */
     if(id_chan != -1) 
     {
-        /* If the user is already connected to a channel that is not the the one with id_chan as its id 
-           then he is kicked from that channel */
-        if(users_list->users[id].channel != -1 && users_list->users[id].channel != id_chan)
+        /* If the user is not already connected to that channel */
+        if(users_list->users[id].channel != id_chan)
         {
-            pthread_mutex_unlock( &(users_list->mutex) );
-            quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
-            pthread_mutex_lock( &(users_list->mutex) );
+            /* If the user is already connected to a channel then he is kicked from that channel */
+            if(users_list->users[id].channel > -1)
+            {
+                pthread_mutex_unlock( &(users_list->mutex) );
+                quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+                pthread_mutex_lock( &(users_list->mutex) );
+            }
+
+            users_list->users[id].channel = id_chan;
+            users_list->channels[id_chan].nb_users++;
+
+            /* The command "/join channel" is sent to notify the user of his successful connection to the channel */
+            strcat(buffer2, name);
+            send_msg(users_list->users[id].sock, buffer2, "");
+
+            /* The users already connected to the channel are notified of the current user's connection */
+            sprintf(buffer, "%s has joined %s\r\n", users_list->users[id].username, name);
+            send_multicast(users_list, buffer, name, "[Server]");
         }
-
-        users_list->users[id].channel = id_chan;
-        users_list->channels[id_chan].nb_users++;
-
-        /* The command "/join channel" is sent to notify the user of his successful connection to the channel */
-        strcat(buffer2, name);
-        send_msg(users_list->users[id].sock, buffer2, "");
-
-        /* The users already connected to the channel are notified of the current user's connection */
-        sprintf(buffer, "%s has joined %s\r\n", users_list->users[id].username, name);
-        send_multicast(users_list, buffer, name, "[Server]");
+        else
+            send_msg(users_list->users[id].sock, "[Server] You are already connected to that channel\r\n", ANSI_COLOR_RED);
     }
     /* If the channel does not exist */
     else
@@ -511,17 +507,20 @@ void quit_chan(struct connected_users* users_list, char* name, int id)
             sprintf(buffer, "/quit %s", name);
             send_msg(users_list->users[id].sock, buffer, "");
 
-            /* The other users connected to the channel are notified of his deconnection */
-            sprintf(buffer, "%s has disconnected from the channel\r\n", users_list->users[id].username);
-            send_multicast(users_list, buffer, name, "[Server]");
-
             /* If after the previous operations, the channel does not have at least one user connected to it, it is removed */
             if(users_list->channels[id_chan].nb_users <= 0)
             {
                 users_list->channels[id_chan].id = -1;
                 strcpy(users_list->channels[id_chan].name, "");
-                users_list->channels[id_chan].nb_users = -1;
+                users_list->channels[id_chan].nb_users = 0;
             }
+            else
+            {
+                /* The other users connected to the channel are notified of his deconnection */
+                sprintf(buffer, "%s has disconnected from the channel\r\n", users_list->users[id].username);
+                send_multicast(users_list, buffer, name, "[Server]");
+            }
+
         }
      }
     /* If the channel does not exists */

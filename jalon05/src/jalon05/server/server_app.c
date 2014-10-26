@@ -22,27 +22,27 @@ int main(int argc, char** argv) {
 	}
 
 
-	//init a fresh socket
+	/* init a fresh socket */
     sock = do_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		
-	//init server address structure
+	/* init server address structure */
 	init_serv_addr(argv[1], &server_info);
 		
-	//init users list structure
+	/* init users list structure */
 	init_users(sock, &users_list);
 
-	//perform the binding
+	/* perform the binding */
 	do_bind(sock, &server_info);
 
-	//specify the socket to be a server socket and listen for at most 20 concurrent client
+	/* specify the socket to be a server socket and listen for at most 20 concurrent client */
 	listen(sock, 1);
 
-	//regex initialization
+	/* regex initialization */
 	regex_init();
 
 	printf("Server listening on port %s\n", argv[1]);
 
-	//creation of the threads accepting the connections
+	/* creation of the threads accepting the connections */
 	ret = pthread_create(&t_accept_conn, NULL, server_accepting, &users_list);
 
 	while(cont) {
@@ -54,17 +54,17 @@ int main(int argc, char** argv) {
 			cont = 0;
 	}
 
-	// send a broadcast notifying all the users of the server shutdown
+	/* send a broadcast notifying all the users of the server shutdown */
 	send_broadcast_by_user_name(&users_list, "Server is shutting down\n", "[Server]");
 
-	// close all the clients' associated sockets and threads
+	/* close all the clients' associated sockets and threads */
 	for(i=0; i<CLIENTS_NB; i++)
         if(users_list.users[i].sock > -1)
         	quit(&users_list, i);
 
 	regex_free();
 
-	// Clean up server socket
+	/* Clean up server socket */
 	close(sock);
 
 	printf("Good bye.\n");

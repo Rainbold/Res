@@ -13,6 +13,7 @@ struct info {
 	int sock;
 	int port;
 	int running;
+    pthread_mutex_t mutex;
 	char username[USERNAME_LEN];
 	char channel[USERNAME_LEN];
 	int req;
