@@ -145,6 +145,9 @@ void* client_handling(void* p_data)
                 case WHO:
                     who(users_list, id);
                     break;
+                case QUIT:
+                    quit(users_list, id);
+                    break;
                 default:
                     /* If the text entered is not a valid command an error message is sent */
                     send_msg(user->sock, "[Server] Invalid command\r\n", ANSI_COLOR_RED);
@@ -277,6 +280,8 @@ void who(struct connected_users* users_list, int id)
 void quit(struct connected_users* users_list, int id)
 {
     pthread_mutex_lock( &(users_list->mutex) );
+
+    do_write(users_list->users[id].sock, "[Server] You will now be terminated.\n");
    
     /* The user socket is closed */
     close(users_list->users[id].sock);

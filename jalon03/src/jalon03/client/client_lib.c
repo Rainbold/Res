@@ -58,11 +58,8 @@ void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
     {
 		fgets(outbuf, SIZE_BUFFER, stdin);
 	
-		if( strcmp("/quit\n", outbuf) )
-		{
-			if(strlen(outbuf) > 1)
-				do_write(pinfo->sock, outbuf);
-		}
+		if(strlen(outbuf) > 1)
+			do_write(pinfo->sock, outbuf);
     }    
 }
 
