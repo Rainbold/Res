@@ -34,8 +34,8 @@
 #include "colors.h"
 #include "network.h"
 
-/* Max client */
-#define CLIENTS_NB 3
+/* Max client + 1, because the server itself counts as a user */
+#define CLIENTS_NB 21
 
 /* Size buffer server */
 #define SIZE_BUFFER 512
