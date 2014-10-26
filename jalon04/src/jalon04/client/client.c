@@ -28,10 +28,12 @@ int main(int argc,char** argv)
 	do_connect(sock, &serv_info, sizeof(serv_info));
 
 	info.sock = sock;
+	info.running = 1;
 	info.port = atoi(argv[2]);
 	memset(info.username, 0, USERNAME_LEN);
-	info.running = 1;
-    pthread_mutex_init( &(info.mutex), NULL );
+	memset(info.channel, 0, USERNAME_LEN);
+	info.req = 0;
+	pipe(info.fd);
 
 	/* Creation of the threads handling the messages */
 	pthread_create(&thread, NULL, handle_server_message, &info);

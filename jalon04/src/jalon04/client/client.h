@@ -14,7 +14,18 @@ struct info {
 	int port;
 	int running;
 	char username[USERNAME_LEN];
-    pthread_mutex_t mutex;
+	char channel[USERNAME_LEN];
+	int req;
+	int fd[2];
+	char filename[MSG_BUFFER];
+	char inbuf[READ_BUFFER];
+};
+
+struct data {
+	int port;
+	char username[USERNAME_LEN];
+	char ip[16];
+	char filepath[MSG_BUFFER];
 };
 
 /**
@@ -32,5 +43,13 @@ void* handle_server_message(void* psock);
  */
 void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER]);
 
+/**
+ * function called when a file is received
+ */
+void* handle_file_receive(void* data);
 
+/**
+ * function called when we need to send a file
+ */
+void* handle_send_file(void* pdata);
 #endif /* CLIENT_H_ */

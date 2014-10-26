@@ -26,7 +26,6 @@
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
 #include <pthread.h>
-#include <poll.h>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -36,7 +35,7 @@
 #include "colors.h"
 #include "network.h"
 
-// Max client (+ 1 spot used to notify users that the server is full)
+// Max client
 #define CLIENTS_NB 4
 
 // Size buffer server
@@ -50,6 +49,9 @@
 
 // Read buffer length in clients
 #define READ_BUFFER 1024
+
+// Buffer for read and write binary file
+#define RW_BUFFER 1024
 
 #define REGEX_CMD_NB 12
 
@@ -101,12 +103,20 @@ struct user_t {
     struct tm tm;
 };
 
+struct channel_t {
+    int id;
+    char name[USERNAME_LEN];
+    pthread_mutex_t mutex;
+    int nb_users;
+};
+
 struct connected_users {
     int sock_serv;
     int current_user;
     int nb_users;
     pthread_mutex_t mutex;
     struct user_t users[CLIENTS_NB];
+    struct channel_t channels[CLIENTS_NB];
 };
 
 #endif /* CONSTANT_H_ */

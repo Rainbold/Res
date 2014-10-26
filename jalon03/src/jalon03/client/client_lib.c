@@ -42,28 +42,28 @@ int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port)
    and sends the message contained into the buffer buf to the server */
 void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 {
+	struct pollfd fds;
+    int ret;
+
 	memset(outbuf, 0, SIZE_BUFFER);
+    
+    fds.fd = 0;
+    fds.events = POLLIN;
 
-	fgets(outbuf, SIZE_BUFFER, stdin);
-
-	if( strcmp("/quit\n", outbuf) )
-	{
-		if(strlen(outbuf) > 1)
-			do_write(pinfo->sock, outbuf);
-
-		/* If the user is connected */
-		if(strlen(pinfo->username) != 0)
+    /* Checks if there is data waiting in stdin */
+    ret = poll(&fds, 1, 1);
+    
+    /* if there is, fgets is executed */
+    if(ret == 1)
+    {
+		fgets(outbuf, SIZE_BUFFER, stdin);
+	
+		if( strcmp("/quit\n", outbuf) )
 		{
-			colour(0);
-			printf("%s> ", pinfo->username);
+			if(strlen(outbuf) > 1)
+				do_write(pinfo->sock, outbuf);
 		}
-		else
-		{
-			colour(0);
-			printf("> ");
-		}
-		fflush(stdout);
-	}
+    }    
 }
 
 /* Thread handling the reading */
@@ -132,10 +132,10 @@ void* handle_server_message(void* info)
 	regex_free();
 	close(pinfo->sock);
 
-	/* When the thread terminates, a signal is sent to the main processus
-	   to terminate it too. That's because the latter is likely to be waiting for
-	   a user input. */
-	kill(getpid(), 15);
+	/* The running variable is set to 0 in order to terminate the loop used in the main thread */	
+    pthread_mutex_lock( &(pinfo->mutex) );
+	pinfo->running = 0;
+    pthread_mutex_unlock( &(pinfo->mutex) );
 
 	return NULL;
 }
