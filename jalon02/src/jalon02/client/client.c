@@ -35,7 +35,7 @@ int main(int argc,char** argv)
 
 	fflush(stdout);
 
-	while( strcmp("/quit\n", outbuf) != 0 && info.running)
+	while(info.running)
 		handle_client_message(&info, outbuf);
 
 	close(sock);

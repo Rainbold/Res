@@ -83,6 +83,7 @@ void* client_handling(void* p_data)
     int cont = 1;
     struct user_t* user = &(users_list->users[id]);
     char buffer[SIZE_BUFFER];
+    char buffer2[SIZE_BUFFER];
 
     /* The aformentionned mutex lock in the server_accepting function is unlocked here */
     pthread_mutex_unlock( &(users_list->mutex) );
@@ -97,8 +98,8 @@ void* client_handling(void* p_data)
         {
             if( strncmp(buffer, "/quit", 5) )
             {
-                do_write(user->sock, "[Server] ");
-                do_write(user->sock, buffer);
+                sprintf(buffer2, "[Server] %s", buffer);
+                do_write(user->sock, buffer2);
             }
             else
             {

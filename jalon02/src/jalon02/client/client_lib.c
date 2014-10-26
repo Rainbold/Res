@@ -56,13 +56,10 @@ void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
     if(ret == 1)
     {
 		fgets(outbuf, SIZE_BUFFER, stdin);
-
-		if( strcmp("/quit\n", outbuf) )
-		{
-			if(strlen(outbuf) > 1)
-				do_write(pinfo->sock, outbuf);
-			fflush(stdout);
-		}
+		
+		if(strlen(outbuf) > 1)
+			do_write(pinfo->sock, outbuf);
+		fflush(stdout);
     }    
 }
 
