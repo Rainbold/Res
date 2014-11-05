@@ -50,7 +50,7 @@ void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
     fds.events = POLLIN;
 
     /* Checks if there is data waiting in stdin */
-    ret = poll(&fds, 1, 0);
+    ret = poll(&fds, 1, 1);
     
     /* if there is, fgets is executed */
     if(ret == 1)
@@ -94,7 +94,10 @@ void* handle_server_message(void* info)
 	close(pinfo->sock);
 
 	/* The running variable is set to 0 in order to terminate the loop used in the main thread */
+	
+    pthread_mutex_lock( &(pinfo->mutex) );
 	pinfo->running = 0;
+    pthread_mutex_unlock( &(pinfo->mutex) );
 	
 	return NULL;
 }

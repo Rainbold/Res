@@ -6,7 +6,7 @@
  */
 
 
-/* This file contains all the headers needed as well as the definition of different
+/* This file contains all the headers needed as well as the definitions of different
    structures used by the server and the client */
 
 #ifndef CONSTANT_H_
@@ -34,19 +34,19 @@
 #include "colors.h"
 #include "network.h"
 
-// Max client
+/* Max client */
 #define CLIENTS_NB 4
 
-// Size buffer server
+/* Size buffer server */
 #define SIZE_BUFFER 512
 
-// Size msg buffer
+/* Size msg buffer */
 #define MSG_BUFFER 256
 
-// Username length same as channel length
+/* Username length same as channel length */
 #define USERNAME_LEN 32
 
-// Read buffer length in clients
+/* Read buffer length in clients */
 #define READ_BUFFER 1024
 
 struct user_t {

@@ -28,6 +28,7 @@ int main(int argc,char** argv)
 	info.sock = sock;
 	info.port = atoi(argv[2]);
 	info.running = 1;
+    pthread_mutex_init( &(info.mutex), NULL );
 
 	/* Creation of the threads handling the messages */
 	pthread_create(&thread, NULL, handle_server_message, &info);

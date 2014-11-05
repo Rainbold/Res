@@ -42,7 +42,9 @@ void* server_accepting(void* p_data)
             /* looks for an empty spot in the array to store the connection data */
             if(users_list->users[i].sock == -1 && users_list->nb_users < CLIENTS_NB)
             {
+                pthread_mutex_lock( &(users_list->mutex) );
                 users_list->nb_users++;
+                pthread_mutex_unlock( &(users_list->mutex) );
                 do_accept(users_list->sock_serv, &(users_list->users[i].sock), &(users_list->users[i].info), users_list->users[i].info_len );
                 
                 /* The mutex on users_list is locked to prevent another connection to change the current_user variable.

@@ -14,6 +14,7 @@ struct info {
 	int port;
 	int running;
 	char username[USERNAME_LEN];
+    pthread_mutex_t mutex;
 };
 
 /**
