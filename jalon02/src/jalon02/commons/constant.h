@@ -35,7 +35,7 @@
 #include "network.h"
 
 /* Max client */
-#define CLIENTS_NB 4
+#define CLIENTS_NB 3
 
 /* Size buffer server */
 #define SIZE_BUFFER 512

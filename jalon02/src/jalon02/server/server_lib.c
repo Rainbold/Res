@@ -13,7 +13,7 @@ void init_users(int sock, struct connected_users* users_list) {
 
     users_list->current_user = -1;
     users_list->sock_serv = sock;
-    users_list->nb_users = 1;
+    users_list->nb_users = 0;
     pthread_mutex_init( &(users_list->mutex), NULL );
 
     for (i=0; i<CLIENTS_NB; i++)
@@ -40,28 +40,36 @@ void* server_accepting(void* p_data)
         for(i=0; i<CLIENTS_NB; i++)
         {
             /* looks for an empty spot in the array to store the connection data */
-            if(users_list->users[i].sock == -1 && users_list->nb_users < CLIENTS_NB)
+            if(users_list->users[i].sock == -1)
             {
                 pthread_mutex_lock( &(users_list->mutex) );
                 users_list->nb_users++;
                 pthread_mutex_unlock( &(users_list->mutex) );
+                
                 do_accept(users_list->sock_serv, &(users_list->users[i].sock), &(users_list->users[i].info), users_list->users[i].info_len );
                 
-                /* The mutex on users_list is locked to prevent another connection to change the current_user variable.
-                   This mutex will be unlocked in the function client_handling. */
-                pthread_mutex_lock( &(users_list->mutex) );
-                users_list->current_user = i;
-                pthread_create(  &(users_list->users[i].thread), NULL, client_handling, users_list );
+                if(users_list->nb_users >= CLIENTS_NB)
+                {
+                    pthread_mutex_lock( &(users_list->mutex) );
+                    users_list->nb_users--;
+                    pthread_mutex_unlock( &(users_list->mutex) );
+            
+                    do_write(users_list->users[i].sock, "[Server] There are too many users connected at the moment, please try again later.\r\n");
+                    close(users_list->users[i].sock);
+                    users_list->users[i].sock = -1;
+                }
+                else
+                {
+                    /* The mutex on users_list is locked to prevent another connection to change the current_user variable.
+                       This mutex will be unlocked in the function client_handling. */
+                    pthread_mutex_lock( &(users_list->mutex) );
+                    users_list->current_user = i;
+                    pthread_create(  &(users_list->users[i].thread), NULL, client_handling, users_list );
+                }
             }
 
             /* If the maximal number of connected users has been reached, a connection is open
                to inform him that there are no spot available at the moment */
-            if(users_list->nb_users >= CLIENTS_NB)
-            {
-                do_accept(users_list->sock_serv, &(tmpUser.sock), NULL, 0);
-                do_write(tmpUser.sock, "[Server] There are too many users connected at the moment, please try again later.\r\n");
-                close(tmpUser.sock);
-            }
         }
     }
 }
