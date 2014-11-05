@@ -16,7 +16,7 @@ void init_users(int sock, struct connected_users* users_list) {
     users_list->nb_users = 1;
     pthread_mutex_init( &(users_list->mutex), NULL );
 
-    for (i=1; i<CLIENTS_NB; i++)
+    for (i=0; i<CLIENTS_NB; i++)
     {
         users_list->users[i].sock = -1;
         memset(&(users_list->users[i].info), 0, sizeof(struct sockaddr_in));
@@ -115,13 +115,8 @@ void quit(struct connected_users* users_list, int id)
 {
     pthread_mutex_lock( &(users_list->mutex) );
 
-    do_write(users_list->users[id].sock, "[Server] You will be terminated.\n");
+    do_write(users_list->users[id].sock, "[Server] You will now be terminated.\n");
 
-    printf("1\n");
-
-    sleep(10);
-
-    printf("2\n");
     /* The user socket is closed */    
     close(users_list->users[id].sock);
 
