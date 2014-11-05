@@ -1,2 +1,0 @@
-/home/maxime/Projets/jalon03/build/jalon03/CMakeFiles/RE216_JALON03_CLIENT.dir
-/home/maxime/Projets/jalon03/build/jalon03/CMakeFiles/RE216_JALON03_SERVER.dir
