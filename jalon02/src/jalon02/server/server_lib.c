@@ -88,7 +88,10 @@ void* client_handling(void* p_data)
         if(do_read(user->sock, buffer, SIZE_BUFFER) != 0)
         {
             if( strncmp(buffer, "/quit", 5) )
+            {
+                do_write(user->sock, "[Server] ");
                 do_write(user->sock, buffer);
+            }
             else
             {
                 quit(users_list, id);
@@ -112,14 +115,21 @@ void quit(struct connected_users* users_list, int id)
 {
     pthread_mutex_lock( &(users_list->mutex) );
 
+    do_write(users_list->users[id].sock, "[Server] You will be terminated.\n");
+
+    printf("1\n");
+
+    sleep(10);
+
+    printf("2\n");
     /* The user socket is closed */    
     close(users_list->users[id].sock);
 
     users_list->nb_users--;
     users_list->users[id].sock = -1;
 
-    pthread_mutex_unlock( &(users_list->mutex) );
-
     /* The thread associated to this user is terminated */
     pthread_cancel(users_list->users[id].thread);
+
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
