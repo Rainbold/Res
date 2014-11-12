@@ -19,6 +19,7 @@ void regex_init()
 
 	memset(buf, 0, 256);
 
+	// Compilation of all regex and get error if needed
 	err[NICK]		= regcomp (&regex_cmds[NICK],	"^/nick",	REG_NOSUB);
 	err[WHOIS]		= regcomp (&regex_cmds[WHOIS],	"^/whois",	REG_NOSUB);
 	err[WHO]		= regcomp (&regex_cmds[WHO],	"^/who",	REG_NOSUB);
@@ -33,11 +34,16 @@ void regex_init()
 	err[CMSGALL]	= regcomp (&regex_cmds[CMSGALL],"^/cmsgall",REG_NOSUB);
 	err[CHAN]		= regcomp (&regex_cmds[CHAN],	"^/chan",	REG_NOSUB);
 
+	// Regex for each commande to get the username or the channel and the message
 	sprintf(buf, "(^/[a-z]{1,7}) (\[?[a-zA-Z0-9]{1,%d}]?) ?(.{0,%d})", USERNAME_LEN, MSG_BUFFER);
 	err[REGEX_CMD_NB]	= regcomp (&regex_match_cmd, buf, REG_EXTENDED);
+
+	// Regex to get IP, port and filepath
 	sprintf(buf, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}) ([0-9]{1,5}) ?(.{0,%d})", MSG_BUFFER);
 	err[REGEX_CMD_NB+1]	= regcomp (&regex_file_cmd, buf, REG_EXTENDED);
-	err[REGEX_CMD_NB+2] = regcomp (&regex_filename, "/?([a-z0-9A-Z.]+)$", REG_EXTENDED);
+	
+	// Regex to get filename without the path
+	err[REGEX_CMD_NB+2]     = regcomp (&regex_filename, "/?([a-z0-9A-Z.]+)$", REG_EXTENDED);
 
 	memset(buf, 0, 256);
 
@@ -79,15 +85,16 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 	memset(userorchannel, 0, USERNAME_LEN);
 	memset(message, 0, MSG_BUFFER);
 
+	// Get the cmd
 	cmd = regex_cmd(buf);
 
 	switch(cmd)
 	{
 	case MSGALL:
-		memcpy(message, buf + 8, strlen(buf) - 8);
-		if(strlen(message) <= 1)
-			return ERRMSGALL;
-		/* no break */
+	    memcpy(message, buf + 8, strlen(buf) - 8); // get the message wich is directly after the cmd (there is no username)
+	    if(strlen(message) <= 1)
+   	    	return ERRMSGALL;
+	  /* no break */
 	case WHO:
 	case MSGCHANNEL:
 		return cmd;
@@ -95,17 +102,18 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 		break;
 	}
 
+	// if we are still in the fonction, this means that their is a username or a channel and a message to get
 	match = regexec(&regex_match_cmd, buf, 4, pmatch, 0);
 
 	if(cmd == QUIT)
 	{
-		if(match)
+		if(match) // if there is no match (match == 1) its a /quit
 			return cmd;
-		else
+		else // else its /quit channel
 			cmd = QUITCHANNEL;
 	}
 
-	if(match != 0)
+	if(match != 0) // in case of an error
 	{
 		switch(cmd)
 		{
@@ -134,6 +142,7 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 
 	// Assuming there is a match
 
+	// Get arguments
 	len = pmatch[2].rm_eo - pmatch[2].rm_so;
 	memcpy(userorchannel, buf + pmatch[2].rm_so, len);
 	userorchannel[len] = 0;
@@ -173,12 +182,6 @@ void regex_get_filere(char* buf, char ip[], char port[], char filepath[])
 
 	match = regexec(&regex_file_cmd, buf, 4, pmatch, 0);
 
-	printf("REGEX %s\n", buf);
-	printf("REGEX %d\n", REG_BADBR);
-	printf("REGEX %d\n", REG_BADPAT);
-	printf("REGEX %d\n", REG_BADRPT);
-	printf("REGEX %d\n", match);
-
 	if(match == 0)
 	{
 		len = pmatch[1].rm_eo - pmatch[1].rm_so;
@@ -193,14 +196,12 @@ void regex_get_filere(char* buf, char ip[], char port[], char filepath[])
 		memcpy(filepath, buf + pmatch[3].rm_so, len);
 		filepath[len] = 0;
 		if(len >= 1) filepath[len-1] = 0;
-		printf("REGEX2 %s %s %s\n", ip, port, filepath);
 	}
 }
 
 void regex_free()
 {
 	int i;
-
 	for(i = 0; i <= REGEX_CMD_NB; i++)
 		regfree (&regex_cmds[i]);
 	regfree (&regex_match_cmd);

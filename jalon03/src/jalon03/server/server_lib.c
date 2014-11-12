@@ -259,14 +259,16 @@ void whois(struct connected_users* users_list, char* name, int id)
 void who(struct connected_users* users_list, int id)
 {
     int i=0;
-    char buffer[USERNAME_LEN*CLIENTS_NB+100] = "";
+    char buffer[USERNAME_LEN*CLIENTS_NB+100] = "[Server] Online users :\r\n";
 
     pthread_mutex_lock( &(users_list->mutex) );
     for(i=0; i<CLIENTS_NB; i++)
     {
-        if(users_list->users[i].sock != -1)
+        if(users_list->users[i].sock > -1)
         {
-            sprintf(buffer, "[Server] Online users :\r\n\t- %s\r\n", users_list->users[i].username);
+            strcat(buffer, "\t- ");
+            strcat(buffer, users_list->users[i].username);
+            strcat(buffer, "\r\n");
         }
     }
 

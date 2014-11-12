@@ -6,7 +6,6 @@
 /* get_addr_info fills the sockaddr_in structure with information such as the server's ip address, the server's port, etc... */
 int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port)
 {
-	//struct hostent* h = gethostbyname(host);
 	struct addrinfo* res;
 	struct addrinfo hint;
 	struct sockaddr_in *addr;
