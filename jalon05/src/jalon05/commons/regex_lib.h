@@ -19,8 +19,10 @@ cmd_t regex_cmd(const char* buf);
 // Return the cmd enum and write argument in the two buffers
 cmd_t regex_match(const char* buf, char userorchannel[], char message[]);
 
+// Regex for file transfer (filename)
 void regex_get_filename(char* buf, char filename[]);
 
+// Regex for file transfer (ip port filename)
 void regex_get_filere(char* buf, char ip[], char port[], char filepath[]);
 
 // Free memory

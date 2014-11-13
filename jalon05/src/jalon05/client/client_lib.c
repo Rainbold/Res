@@ -40,24 +40,26 @@ int get_addr_info(struct sockaddr_in* serv_info, char* host, char* port)
 
 /* handle_client_message stores the user input into buffer buf while protecting the application from a buffer overflow
    and sends the message contained into the buffer buf to the server */
-void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
+char handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 {
-	struct pollfd fds;
-    int ret;
+	struct pollfd fds[2];
 
 	memset(outbuf, 0, SIZE_BUFFER);
     
-    fds.fd = 0;
-    fds.events = POLLIN;
+    fds[0].fd = 0;
+    fds[0].events = POLLIN;
+
+    fds[1].fd = pinfo->fd[0];
+    fds[1].events = POLLIN;
 
     /* Checks if there is data waiting in stdin */
-    ret = poll(&fds, 1, 1);
+    poll(fds, 2, -1);
     
     /* if there is, fgets is executed */
-    if(ret == 1)
+    if(fds[0].revents == POLLIN)
     {
 		fgets(outbuf, SIZE_BUFFER, stdin);
-
+		pthread_mutex_lock( &(pinfo->mutex) );
 		if(pinfo->req == 1)
 		{
 			write(pinfo->fd[1], outbuf, strlen(outbuf));
@@ -68,7 +70,12 @@ void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 			if(strlen(outbuf) > 1)
 				do_write(pinfo->sock, outbuf);
 		}
+		pthread_mutex_unlock( &(pinfo->mutex) );
 	}
+    else if(fds[1].revents == POLLIN)
+		return 1;
+
+    return 0;
 }
 
 /* Thread handling the reading */
@@ -108,14 +115,18 @@ void* handle_server_message(void* info)
 		switch(cmd)
 		{
 			case NICK:
+				pthread_mutex_lock( &(pinfo->mutex) );
 				memset(pinfo->username, 0, USERNAME_LEN);
 				memset(ip, 0, 16);
 				memcpy(pinfo->username, userorchannel, strlen(userorchannel));
 				strcpy(ip, message);
 				printf("Change of username\n");
+				pthread_mutex_unlock( &(pinfo->mutex) );
 				break;
 			case QUITCHANNEL:
+				pthread_mutex_lock( &(pinfo->mutex) );
 				memset(pinfo->channel, 0, USERNAME_LEN*sizeof(char));
+				pthread_mutex_unlock( &(pinfo->mutex) );
 				break;
 			case MSG:
 				colour(COLOR_PM);
@@ -128,8 +139,10 @@ void* handle_server_message(void* info)
 				colour(0);
 				break;
 			case JOIN:
+				pthread_mutex_lock( &(pinfo->mutex) );
 				memset(pinfo->channel, 0, USERNAME_LEN);
 				memcpy(pinfo->channel, userorchannel, strlen(userorchannel));
+				pthread_mutex_unlock( &(pinfo->mutex) );
 				break;
 			case CHAN:
 				colour(COLOR_CHANNEL);
@@ -140,7 +153,9 @@ void* handle_server_message(void* info)
 				printf("%s", inbuf);
 				break;
 			case SEND:
+				pthread_mutex_lock( &(pinfo->mutex) );
 				pinfo->req = 1;
+				pthread_mutex_unlock( &(pinfo->mutex) );
 				message[strlen(message)-1] = 0;
 				regex_get_filename(message, filename);
 				printf("%s wants you to accept the transfer of the file named \"%s\". Do you accept? Press enter and then [y/n]\n> ", userorchannel, filename);
@@ -148,8 +163,10 @@ void* handle_server_message(void* info)
 				read(pinfo->fd[0], buf, 50);
 				if(buf[0] == 'y')
 				{
+					pthread_mutex_lock( &(pinfo->mutex) );
 					memset(pinfo->filename, 0, MSG_BUFFER);
 					memcpy(pinfo->filename, filename, strlen(filename));
+					pthread_mutex_unlock( &(pinfo->mutex) );
 					pthread_create(&p2p, NULL, handle_file_receive, pinfo);
 					memset(buf, 0, 50);
 					sprintf(buf, "/filere %s %s %d %s\n", userorchannel, ip, ++(pinfo->port), message);
@@ -167,8 +184,10 @@ void* handle_server_message(void* info)
 				if(strlen(message) >= 2)
 				{
 					printf("Sending file to %s\n", userorchannel);
+					pthread_mutex_lock( &(pinfo->mutex) );
 					memset(pinfo->inbuf, 0, READ_BUFFER);
 					strcpy(pinfo->inbuf, message);
+					pthread_mutex_unlock( &(pinfo->mutex) );
 					pthread_create(&p2p, NULL, handle_send_file, pinfo);
 				}
 				else
@@ -206,14 +225,8 @@ void* handle_server_message(void* info)
 		memset(inbuf, 0, len);
 	}
 	
-	regex_free();
-	close(pinfo->sock);
-
-	/* The running variable is set to 0 in order to terminate the loop used in the main thread */	
-    pthread_mutex_lock( &(pinfo->mutex) );
-	pinfo->running = 0;
-    pthread_mutex_unlock( &(pinfo->mutex) );
-
+	printf("\n");
+	write(pinfo->fd[1], "quit", 4);
 	return NULL;
 }
 
@@ -228,12 +241,14 @@ void* handle_file_receive(void* pdata)
 	FILE* file;
 
 	memset(bufin, 0, RW_BUFFER);
+	pthread_mutex_lock( &(pinfo->mutex) );
 	sprintf(bufin, "./inbox/%s", pinfo->filename);
 	file = fopen(bufin, "wb+");
 	memset(bufin, 0, RW_BUFFER);
 
 	memset(port, 0, 6);
 	sprintf(port, "%d", pinfo->port);
+	pthread_mutex_unlock( &(pinfo->mutex) );
 
 	if(file == NULL)
 	{

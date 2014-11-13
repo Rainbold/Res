@@ -3,23 +3,16 @@
 
 #include "../commons/constant.h"
 
-#define PM_COLOR
-#define CHANNEL_COLOR
-#define ALL_COLOR
-#define SERVER_COLOR
-#define ERROR_MSG
-
 struct info {
 	int sock;
 	int port;
-	int running;
-    pthread_mutex_t mutex;
 	char username[USERNAME_LEN];
 	char channel[USERNAME_LEN];
-	int req;
+	int req; // used to file transfer
 	int fd[2];
 	char filename[MSG_BUFFER];
 	char inbuf[READ_BUFFER];
+	pthread_mutex_t mutex;
 };
 
 struct data {
@@ -42,7 +35,7 @@ void* handle_server_message(void* psock);
 /**
  * a function called with user input
  */
-void handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER]);
+char handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER]);
 
 /**
  * function called when a file is received

@@ -60,36 +60,36 @@ typedef enum {
   // cmds sent to server
   NICK, 		// 0
   WHOIS,		// 1
-  WHO,		// 2
-  QUIT,		// 3
+  WHO,			// 2
+  QUIT,			// 3
   MSGALL,		// 4
-  MSG,		// 5
+  MSG,			// 5
   CREATE,		// 6
-  JOIN,		// 7
-  SEND,		// 8
+  JOIN,			// 7
+  SEND,			// 8
   FILERE,		// 9
   
   // cmds sent to client
-  CMSGALL,	// 10		/cmsgall username msg
-  CHAN,		// 11		/chan user msg
+  CMSGALL,		// 10		/cmsgall username msg
+  CHAN,			// 11		/chan user msg
   
   // error in cmds
-  ERRNICK,	// 12
-  ERRWHOIS,	// 13
+  ERRNICK,		// 12
+  ERRWHOIS,		// 13
   ERRMSGALL,	// 14
   ERRMSG,		// 15
   ERRCREATE,	// 16
-  ERRJOIN,	// 17
-  ERRSEND, 	// 18
+  ERRJOIN,		// 17
+  ERRSEND, 		// 18
   ERRFILERE,	// 19
-  ERRCHAN,	// 20
+  ERRCHAN,		// 20
   
   // Global error
   ERROR,		// 21
   
   // other
-  MSGCHANNEL, // 22
-  QUITCHANNEL// 23
+  MSGCHANNEL,	// 22
+  QUITCHANNEL	// 23
 } cmd_t;
 
 struct user_t {
