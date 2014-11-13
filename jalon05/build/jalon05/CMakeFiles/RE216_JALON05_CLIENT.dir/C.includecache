@@ -6,9 +6,9 @@
 
 #IncludeRegexTransform: 
 
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/colors.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/colors.h
 
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/constant.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/constant.h
 regex.h
 -
 resolv.h
@@ -46,27 +46,15 @@ sys/socket.h
 sys/types.h
 -
 colors.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/colors.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/colors.h
 network.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/network.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/network.h
 
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/network.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/network.c
+network.h
+/root/Enseirb/Res/jalon05/src/jalon05/commons/network.h
+
+/root/Enseirb/Res/jalon05/src/jalon05/commons/network.h
 constant.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/constant.h
-
-/root/Enseirb/Res/jalon05/src/jalon05/client/client.c
-client.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/client.h
-
-/root/Enseirb/Res/jalon05/src/jalon05/client/client.h
-../commons/constant.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/../commons/constant.h
-
-/root/Enseirb/Res/jalon05/src/jalon05/client/client_lib.c
-client.h
-/root/Enseirb/Res/jalon05/src/jalon05/client/client.h
-netdb.h
--
-errno.h
--
+/root/Enseirb/Res/jalon05/src/jalon05/commons/constant.h
 

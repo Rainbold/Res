@@ -388,8 +388,11 @@ void quit(struct connected_users* users_list, int id)
     pthread_mutex_lock( &(users_list->mutex) );
    
     /* The user is disconnected from his channel if he was connected to one */ 
-    if(users_list->users[id].channel != -1)
-        quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+    if(users_list->users[id].channel != -1) {
+    	pthread_mutex_unlock( &(users_list->mutex) );
+    	quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+    	pthread_mutex_lock( &(users_list->mutex) );
+    }
 
     do_write(users_list->users[id].sock, "[Server] You will now be terminated.\n");
     
