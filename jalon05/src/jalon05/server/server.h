@@ -83,7 +83,7 @@ void join(struct connected_users* users_list, char* name, int id);
 /**
  * Quits a channel called name
  */
-void quit_chan(struct connected_users* users_list, char* name, int id);
+void quit_chan(struct connected_users* users_list, char* name, int id, int is_quit);
 
 /**
  * Redirects a file request to a user

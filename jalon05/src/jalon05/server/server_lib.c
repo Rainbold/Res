@@ -227,7 +227,7 @@ void* client_handling(void* p_data)
                     do_write(users_list->users[find_username_id(users_list, name)].sock, buffer);
                     break;
                 case QUITCHANNEL:
-                    quit_chan(users_list, name, id);
+                    quit_chan(users_list, name, id, 0);
                     break;
                 case QUIT:
                     quit(users_list, id);
@@ -388,10 +388,12 @@ void quit(struct connected_users* users_list, int id)
     pthread_mutex_lock( &(users_list->mutex) );
    
     /* The user is disconnected from his channel if he was connected to one */ 
-    if(users_list->users[id].channel != -1) {
-    	pthread_mutex_unlock( &(users_list->mutex) );
-    	quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
-    	pthread_mutex_lock( &(users_list->mutex) );
+
+    if(users_list->users[id].channel != -1)
+    {
+        pthread_mutex_unlock( &(users_list->mutex) );
+        quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id, 1);
+        pthread_mutex_lock( &(users_list->mutex) );
     }
 
     do_write(users_list->users[id].sock, "[Server] You will now be terminated.\n");
@@ -464,7 +466,7 @@ void join(struct connected_users* users_list, char* name, int id)
             if(users_list->users[id].channel > -1)
             {
                 pthread_mutex_unlock( &(users_list->mutex) );
-                quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id);
+                quit_chan(users_list, users_list->channels[users_list->users[id].channel].name, id, 0);
                 pthread_mutex_lock( &(users_list->mutex) );
             }
 
@@ -490,7 +492,7 @@ void join(struct connected_users* users_list, char* name, int id)
 }
 
 /* quit_chan disconnects a user from the channel name */
-void quit_chan(struct connected_users* users_list, char* name, int id)
+void quit_chan(struct connected_users* users_list, char* name, int id, int is_quit)
 {
     pthread_mutex_lock( &(users_list->mutex) );
 
@@ -507,8 +509,11 @@ void quit_chan(struct connected_users* users_list, char* name, int id)
             users_list->channels[id_chan].nb_users--;
 
             /* The command "/quit channel" is sent to the user to confirm his deconnection from the channel */
-            sprintf(buffer, "/quit %s", name);
-            send_msg(users_list->users[id].sock, buffer, "");
+            if(!is_quit)
+            {
+                sprintf(buffer, "/quit %s", name);
+                send_msg(users_list->users[id].sock, buffer, "");
+            }
 
             /* If after the previous operations, the channel does not have at least one user connected to it, it is removed */
             if(users_list->channels[id_chan].nb_users <= 0)
