@@ -46,7 +46,7 @@ char handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 
 	memset(outbuf, 0, SIZE_BUFFER);
     
-    fds[0].fd = 0;
+    fds[0].fd = 0; // STDIN
     fds[0].events = POLLIN;
 
     fds[1].fd = pinfo->fd[0];
@@ -63,7 +63,6 @@ char handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 		if(pinfo->req == 1)
 		{
 			write(pinfo->fd[1], outbuf, strlen(outbuf));
-			pinfo->req = 0;
 		}
 		else
 		{
@@ -72,8 +71,11 @@ char handle_client_message(struct info* pinfo, char outbuf[SIZE_BUFFER])
 		}
 		pthread_mutex_unlock( &(pinfo->mutex) );
 	}
-    else if(fds[1].revents == POLLIN)
-		return 1;
+    else if(pinfo->req == 0 && fds[1].revents == POLLIN) {
+    	read(pinfo->fd[0], outbuf, SIZE_BUFFER);
+    	if(!strncmp(outbuf, "quit", 4))
+    		return 1;
+    }
 
     return 0;
 }
@@ -120,7 +122,7 @@ void* handle_server_message(void* info)
 				memset(ip, 0, 16);
 				memcpy(pinfo->username, userorchannel, strlen(userorchannel));
 				strcpy(ip, message);
-				printf("Change of username\n");
+				printf("Change of username, ip : %s\n", ip);
 				pthread_mutex_unlock( &(pinfo->mutex) );
 				break;
 			case QUITCHANNEL:
@@ -168,9 +170,11 @@ void* handle_server_message(void* info)
 					memcpy(pinfo->filename, filename, strlen(filename));
 					pthread_mutex_unlock( &(pinfo->mutex) );
 					pthread_create(&p2p, NULL, handle_file_receive, pinfo);
+					pthread_detach(p2p);
 					memset(buf, 0, 50);
 					sprintf(buf, "/filere %s %s %d %s\n", userorchannel, ip, ++(pinfo->port), message);
 					do_write(pinfo->sock, buf);
+					pinfo->req = 0;
 				}
 				else
 				{
@@ -189,6 +193,7 @@ void* handle_server_message(void* info)
 					strcpy(pinfo->inbuf, message);
 					pthread_mutex_unlock( &(pinfo->mutex) );
 					pthread_create(&p2p, NULL, handle_send_file, pinfo);
+					pthread_detach(p2p);
 				}
 				else
 					printf("> %s cancelled file transfer\n", userorchannel);

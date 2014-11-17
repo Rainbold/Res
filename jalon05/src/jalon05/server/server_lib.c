@@ -181,7 +181,7 @@ void* client_handling(void* p_data)
     } while(cont);
 
     sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
-    send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
+    //send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
 
     cont = 1;
     while(cont)
@@ -223,7 +223,7 @@ void* client_handling(void* p_data)
                     break;
                 case FILERE:
                     sprintf(buffer, "/filere %s %s", user->username, msg);
-                    printf("%s\n", buffer);
+                    //printf("%s\n", buffer);
                     do_write(users_list->users[find_username_id(users_list, name)].sock, buffer);
                     break;
                 case QUITCHANNEL:
@@ -321,9 +321,9 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
         
             /* The successful /nick command is notified to the user */
             memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-            sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
+            //sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
 
-            send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
+            //send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
             
             pthread_mutex_unlock( &(users_list->mutex) );
         }

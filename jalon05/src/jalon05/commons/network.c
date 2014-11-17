@@ -72,10 +72,10 @@ int do_read(const int socket, char buffer[], int size)
 	return n;
 }
 
-int do_write(const int socket, const char buffer[SIZE_BUFFER])
+int do_write(const int socket, const char buffer[])
 {
 	ssize_t n = 0;
-	ssize_t rest = strlen(buffer) + 1;
+	ssize_t rest = strlen(buffer);
 
 	do {
 		n = write(socket, buffer+n, rest);
