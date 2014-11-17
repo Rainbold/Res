@@ -107,101 +107,130 @@ void* handle_server_message(void* info)
 
 	memset(ip,				0, 16);
 
+        ssize_t r;
+        size_t length;
+        char* line = NULL;
+        FILE* fd;
+        int i=0;
+
 	while(1)
 	{
 		len = do_read(pinfo->sock, inbuf, READ_BUFFER);
 		if(len == 0) break;
 
-		cmd = regex_match(inbuf, userorchannel, message);
+		i=0;
 
-		switch(cmd)
+        while(inbuf[i] || inbuf[i+1])
+        {
+                if(inbuf[i] == 0)
+                        inbuf[i] = '\n';
+                i++;
+        }
+
+		if(strlen(inbuf))
 		{
-			case NICK:
-				pthread_mutex_lock( &(pinfo->mutex) );
-				memset(pinfo->username, 0, USERNAME_LEN);
-				memset(ip, 0, 16);
-				memcpy(pinfo->username, userorchannel, strlen(userorchannel));
-				strcpy(ip, message);
-				printf("Change of username, ip : %s\n", ip);
-				pthread_mutex_unlock( &(pinfo->mutex) );
-				break;
-			case QUITCHANNEL:
-				pthread_mutex_lock( &(pinfo->mutex) );
-				memset(pinfo->channel, 0, USERNAME_LEN*sizeof(char));
-				pthread_mutex_unlock( &(pinfo->mutex) );
-				break;
-			case MSG:
-				colour(COLOR_PM);
-				printf("[%s] : %s", userorchannel, message);
-				colour(0);
-				break;
-			case CMSGALL:
-				colour(COLOR_ALL);
-				printf("[%s] : %s", userorchannel, message);
-				colour(0);
-				break;
-			case JOIN:
-				pthread_mutex_lock( &(pinfo->mutex) );
-				memset(pinfo->channel, 0, USERNAME_LEN);
-				memcpy(pinfo->channel, userorchannel, strlen(userorchannel));
-				pthread_mutex_unlock( &(pinfo->mutex) );
-				break;
-			case CHAN:
-				colour(COLOR_CHANNEL);
-				printf("%s> : %s", userorchannel, message);
-				colour(0);
-				break;
-			case MSGCHANNEL: /* message from server */
-				printf("%s", inbuf);
-				break;
-			case SEND:
-				pthread_mutex_lock( &(pinfo->mutex) );
-				pinfo->req = 1;
-				pthread_mutex_unlock( &(pinfo->mutex) );
-				message[strlen(message)-1] = 0;
-				regex_get_filename(message, filename);
-				printf("%s wants you to accept the transfer of the file named \"%s\". Do you accept? Press enter and then [y/n]\n> ", userorchannel, filename);
-				fflush(stdout);
-				read(pinfo->fd[0], buf, 50);
-				if(buf[0] == 'y')
-				{
-					pthread_mutex_lock( &(pinfo->mutex) );
-					memset(pinfo->filename, 0, MSG_BUFFER);
-					memcpy(pinfo->filename, filename, strlen(filename));
-					pthread_mutex_unlock( &(pinfo->mutex) );
-					pthread_create(&p2p, NULL, handle_file_receive, pinfo);
-					pthread_detach(p2p);
-					memset(buf, 0, 50);
-					sprintf(buf, "/filere %s %s %d %s\n", userorchannel, ip, ++(pinfo->port), message);
-					do_write(pinfo->sock, buf);
-					pinfo->req = 0;
-				}
-				else
-				{
-					printf("Abort\n");
-					memset(buf, 0, 50);
-					sprintf(buf, "/filere %s\n", userorchannel);
-					do_write(pinfo->sock, buf);
-				}
-				break;
-			case FILERE:
-				if(strlen(message) >= 2)
-				{
-					printf("Sending file to %s\n", userorchannel);
-					pthread_mutex_lock( &(pinfo->mutex) );
-					memset(pinfo->inbuf, 0, READ_BUFFER);
-					strcpy(pinfo->inbuf, message);
-					pthread_mutex_unlock( &(pinfo->mutex) );
-					pthread_create(&p2p, NULL, handle_send_file, pinfo);
-					pthread_detach(p2p);
-				}
-				else
-					printf("> %s cancelled file transfer\n", userorchannel);
-				break;
+			fd = fmemopen(inbuf, strlen(inbuf), "r");
+	        //fgets(line, 15, fd);
 
-			default:
-				printf("\nUnknown command: %s\n", inbuf);
-				break;
+	      	while( (r = getline(&line, &len, fd)) != -1 )
+	      	{
+	      		if(line == NULL)
+	      			break;
+
+				cmd = regex_match(line, userorchannel, message);
+
+				switch(cmd)
+				{
+					case NICK:
+						pthread_mutex_lock( &(pinfo->mutex) );
+						memset(pinfo->username, 0, USERNAME_LEN);
+						memset(ip, 0, 16);
+						memcpy(pinfo->username, userorchannel, strlen(userorchannel));
+						strcpy(ip, message);
+						printf("Change of username, ip : %s\n", ip);
+						pthread_mutex_unlock( &(pinfo->mutex) );
+						break;
+					case QUITCHANNEL:
+						pthread_mutex_lock( &(pinfo->mutex) );
+						memset(pinfo->channel, 0, USERNAME_LEN*sizeof(char));
+						pthread_mutex_unlock( &(pinfo->mutex) );
+						break;
+					case MSG:
+						colour(COLOR_PM);
+						printf("[%s] : %s", userorchannel, message);
+						colour(0);
+						break;
+					case CMSGALL:
+						colour(COLOR_ALL);
+						printf("[%s] : %s", userorchannel, message);
+						colour(0);
+						break;
+					case JOIN:
+						pthread_mutex_lock( &(pinfo->mutex) );
+						memset(pinfo->channel, 0, USERNAME_LEN);
+						memcpy(pinfo->channel, userorchannel, strlen(userorchannel));
+						pthread_mutex_unlock( &(pinfo->mutex) );
+						break;
+					case CHAN:
+						colour(COLOR_CHANNEL);
+						printf("%s> : %s", userorchannel, message);
+						colour(0);
+						break;
+					case MSGCHANNEL: /* message from server */
+						printf("%s", line);
+						break;
+					case SEND:
+						pthread_mutex_lock( &(pinfo->mutex) );
+						pinfo->req = 1;
+						pthread_mutex_unlock( &(pinfo->mutex) );
+						message[strlen(message)-1] = 0;
+						regex_get_filename(message, filename);
+						printf("%s wants you to accept the transfer of the file named \"%s\". Do you accept? Press enter and then [y/n]\n> ", userorchannel, filename);
+						fflush(stdout);
+						read(pinfo->fd[0], buf, 50);
+						if(buf[0] == 'y')
+						{
+							pthread_mutex_lock( &(pinfo->mutex) );
+							memset(pinfo->filename, 0, MSG_BUFFER);
+							memcpy(pinfo->filename, filename, strlen(filename));
+							pthread_mutex_unlock( &(pinfo->mutex) );
+							pthread_create(&p2p, NULL, handle_file_receive, pinfo);
+							pthread_detach(p2p);
+							memset(buf, 0, 50);
+							sprintf(buf, "/filere %s %s %d %s\n", userorchannel, ip, ++(pinfo->port), message);
+							do_write(pinfo->sock, buf);
+							pinfo->req = 0;
+						}
+						else
+						{
+							printf("Abort\n");
+							memset(buf, 0, 50);
+							sprintf(buf, "/filere %s\n", userorchannel);
+							do_write(pinfo->sock, buf);
+						}
+						break;
+					case FILERE:
+						if(strlen(message) >= 2)
+						{
+							printf("Sending file to %s\n", userorchannel);
+							pthread_mutex_lock( &(pinfo->mutex) );
+							memset(pinfo->inbuf, 0, READ_BUFFER);
+							strcpy(pinfo->inbuf, message);
+							pthread_mutex_unlock( &(pinfo->mutex) );
+							pthread_create(&p2p, NULL, handle_send_file, pinfo);
+							pthread_detach(p2p);
+						}
+						else
+							printf("> %s cancelled file transfer\n", userorchannel);
+						break;
+
+					default:
+						printf("\nUnknown command: %s\n", line);
+						break;
+				}
+
+				fflush(stdout);
+			}
 		}
 
 		if(strlen(pinfo->channel) != 0)
@@ -227,7 +256,8 @@ void* handle_server_message(void* info)
 		}
 
 		fflush(stdout);
-		memset(inbuf, 0, len);
+
+		memset(inbuf, 0, READ_BUFFER);
 	}
 	
 	printf("\n");
@@ -319,6 +349,7 @@ void* handle_send_file(void* pdata)
 		c = connect(sock, (struct sockaddr*)&serv_info, sizeof(serv_info));
 		if(c == 0)
 			break;
+		sleep(1);
 	}
 
 	if(c != 0)

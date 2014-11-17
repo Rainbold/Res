@@ -8,7 +8,10 @@
 #include "server.h"
 
 /* send_broadcast_by_user_name sends a message to all the users */
-void send_broadcast_by_user_name(const struct connected_users* users_list, const char buffer[MSG_BUFFER], const char uname_src[USERNAME_LEN]) {
+void send_broadcast_by_user_name(struct connected_users* users_list, const char buffer[MSG_BUFFER], const char uname_src[USERNAME_LEN]) {
+    
+    pthread_mutex_lock( &(users_list->mutex) );
+    
     int i=0;
     char str[SIZE_BUFFER] = "";
 
@@ -23,11 +26,16 @@ void send_broadcast_by_user_name(const struct connected_users* users_list, const
         if(users_list->users[i].sock > -1 && !strcmp(users_list->users[i].username, uname_src) )
             send_msg(users_list->users[i].sock, "", "");
     }
+    
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 /* send_unicast sends a message to a specific user */
-void send_unicast(const struct connected_users* users_list, const char buffer[MSG_BUFFER], const char *uname_dest,
+void send_unicast(struct connected_users* users_list, const char buffer[MSG_BUFFER], const char *uname_dest,
         const char* uname_src) {
+    
+    pthread_mutex_lock( &(users_list->mutex) );
+    
     int i=0;
     char str[SIZE_BUFFER] = "";
 
@@ -44,11 +52,15 @@ void send_unicast(const struct connected_users* users_list, const char buffer[MS
         }
     else
         send_msg(users_list->users[find_username_id((struct connected_users*)users_list, (char*)uname_src)].sock, "", "");
+
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 /* send_multicast sends a message to all the users connected to the channel cname */
 void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER], char *cname, char* uname_src) 
 {
+    pthread_mutex_lock( &(users_list->mutex) );
+    
     int i=0;
     char str[SIZE_BUFFER] = "";
     int id_chan = find_channel_id(users_list, cname);
@@ -64,6 +76,7 @@ void send_multicast(struct connected_users* users_list, char buffer[SIZE_BUFFER]
         if( users_list->users[i].sock > -1 && !strcmp(users_list->users[i].username, uname_src) )
             send_msg(users_list->users[i].sock, "", "");
     }
+    pthread_mutex_unlock( &(users_list->mutex) );
 }
 
 /* init_users will initialize the whole connected_users structure called users_list */
@@ -181,7 +194,7 @@ void* client_handling(void* p_data)
     } while(cont);
 
     sprintf(buffer, "[Server] Welcome to our chat, %s !\r\n", name);
-    //send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
+    send_msg(user->sock, buffer, ANSI_COLOR_YELLOW);
 
     cont = 1;
     while(cont)
@@ -321,9 +334,9 @@ void nick(struct connected_users* users_list, char pname[USERNAME_LEN], int id)
         
             /* The successful /nick command is notified to the user */
             memset(buffer, 0, sizeof(char)*SIZE_BUFFER);
-            //sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
+            sprintf(buffer, "[Server] You changed your username to %s\r\n", name);
 
-            //send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
+            send_msg(users_list->users[id].sock, buffer, ANSI_COLOR_YELLOW);
             
             pthread_mutex_unlock( &(users_list->mutex) );
         }
@@ -479,7 +492,10 @@ void join(struct connected_users* users_list, char* name, int id)
 
             /* The users already connected to the channel are notified of the current user's connection */
             sprintf(buffer, "%s has joined %s\r\n", users_list->users[id].username, name);
+            
+            pthread_mutex_unlock( &(users_list->mutex) );
             send_multicast(users_list, buffer, name, "[Server]");
+            pthread_mutex_lock( &(users_list->mutex) );
         }
         else
             send_msg(users_list->users[id].sock, "[Server] You are already connected to that channel\r\n", ANSI_COLOR_RED);
@@ -526,7 +542,10 @@ void quit_chan(struct connected_users* users_list, char* name, int id, int is_qu
             {
                 /* The other users connected to the channel are notified of his deconnection */
                 sprintf(buffer, "%s has disconnected from the channel\r\n", users_list->users[id].username);
+        
+                pthread_mutex_unlock( &(users_list->mutex) );
                 send_multicast(users_list, buffer, name, "[Server]");
+                pthread_mutex_lock( &(users_list->mutex) );
             }
 
         }
@@ -563,8 +582,10 @@ void send_msg(int sock, char* msg, char* color)
 {
     /* +10 is added to the default buffer size because each color (and the color reset) takes 5 characters */
     char buffer[SIZE_BUFFER+10] = "";
-    
-    sprintf(buffer, "%s%s%s", color, msg, ANSI_COLOR_RESET);
+    if(!strcmp(color, ""))
+        sprintf(buffer, "%s\0", msg);
+    else
+        sprintf(buffer, "%s%s%s\0", color, msg, ANSI_COLOR_RESET);
 
     do_write(sock, buffer);
 }
