@@ -583,9 +583,9 @@ void send_msg(int sock, char* msg, char* color)
     /* +10 is added to the default buffer size because each color (and the color reset) takes 5 characters */
     char buffer[SIZE_BUFFER+10] = "";
     if(!strcmp(color, ""))
-        sprintf(buffer, "%s\0", msg);
+        sprintf(buffer, "%s", msg);
     else
-        sprintf(buffer, "%s%s%s\0", color, msg, ANSI_COLOR_RESET);
+        sprintf(buffer, "%s%s%s", color, msg, ANSI_COLOR_RESET);
 
     do_write(sock, buffer);
 }

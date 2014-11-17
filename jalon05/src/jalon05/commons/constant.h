@@ -37,7 +37,7 @@
 #include "network.h"
 
 // Max client (+ 1 spot used to notify users that the server is full + 1 spot for the server)
-#define CLIENTS_NB 5
+#define CLIENTS_NB 22
 
 // Size buffer server
 #define SIZE_BUFFER 512

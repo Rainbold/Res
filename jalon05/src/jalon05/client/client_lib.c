@@ -146,6 +146,8 @@ void* handle_server_message(void* info)
 						memset(pinfo->username, 0, USERNAME_LEN);
 						memset(ip, 0, 16);
 						memcpy(pinfo->username, userorchannel, strlen(userorchannel));
+						len = strlen(message);
+						if(len > 0 && message[len-1] == '\n') message[--len] = '\0';
 						strcpy(ip, message);
 						printf("Change of username, ip : %s\n", ip);
 						pthread_mutex_unlock( &(pinfo->mutex) );
@@ -329,9 +331,6 @@ void* handle_send_file(void* pdata)
 	ssize_t r,n,t;
 
 	regex_get_filere(pinfo->inbuf, ip, port, filepath);
-	printf("%s\n", ip);
-	printf("%s\n", port);
-	printf("%s\n", filepath);
 
 	// todo erno
 	file = fopen(filepath, "rb");
