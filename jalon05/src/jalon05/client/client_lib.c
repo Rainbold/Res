@@ -245,6 +245,8 @@ void* handle_file_receive(void* pdata)
 	char bufin[RW_BUFFER];
 	FILE* file;
 
+	system("mkdir inbox 2>/dev/null");
+
 	memset(bufin, 0, RW_BUFFER);
 	pthread_mutex_lock( &(pinfo->mutex) );
 	sprintf(bufin, "./inbox/%s", pinfo->filename);
@@ -290,7 +292,7 @@ void* handle_send_file(void* pdata)
 	char ip[16];
 	char port[6];
 	char filepath[MSG_BUFFER];
-	int c;
+	int c, i;
 	FILE* file;
 	char bufout[RW_BUFFER];
 	struct info* pinfo = pdata;
@@ -312,7 +314,12 @@ void* handle_send_file(void* pdata)
 	}
 	get_addr_info(&serv_info, ip, port);
 	sock = do_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	c = connect(sock, (struct sockaddr*)&serv_info, sizeof(serv_info));
+
+	for(i = 0; i < 5; i++) {
+		c = connect(sock, (struct sockaddr*)&serv_info, sizeof(serv_info));
+		if(c == 0)
+			break;
+	}
 
 	if(c != 0)
 	{
