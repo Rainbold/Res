@@ -85,7 +85,7 @@ void* handle_server_message(void* info)
 {
 	struct info* pinfo = info;
 	struct data data;
-	int len = 1;
+	size_t len = 1;
 	cmd_t cmd;
 	pthread_t p2p;
 
@@ -137,7 +137,7 @@ void* handle_server_message(void* info)
 	      		if(line == NULL)
 	      			break;
 
-				cmd = regex_match(line, userorchannel, message);
+				cmd = regex_match((const char*) line, userorchannel, message);
 
 				switch(cmd)
 				{

@@ -86,7 +86,7 @@ cmd_t regex_match(const char* buf, char userorchannel[], char message[])
 	memset(message, 0, MSG_BUFFER);
 
 	// Get the cmd
-	cmd = regex_cmd(buf);
+	cmd = regex_cmd((const char*) buf);
 
 	switch(cmd)
 	{
